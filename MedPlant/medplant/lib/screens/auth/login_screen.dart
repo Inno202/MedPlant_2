@@ -1,48 +1,70 @@
 // lib/screens/auth/login_screen.dart
+// Firebase Authentication login.
+// On success: fetches role from Firestore → navigates to /home
+
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:medplant/providers/navigation_provider.dart';
 import 'package:provider/provider.dart';
-
 import '/constants/app_colors.dart';
 import '/widgets/custom_text_field.dart';
 import '/widgets/primary_button.dart';
 import '/widgets/outlined_button.dart';
 import '/providers/user_provider.dart';
 import '/models/user_role.dart';
+import '/services/auth_service.dart';
 
-class LoginScreen extends StatelessWidget {
-  LoginScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
-  final TextEditingController usernameController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
 
-  void handleLogin(BuildContext context) {
-    final username = usernameController.text.trim();
-    final password = passwordController.text.trim();
+class _LoginScreenState extends State<LoginScreen> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool _loading = false;
+  String? _error;
 
-    final userProvider = context.read<UserProvider>();
-    final navProvider = context.read<NavigationProvider>();
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
-    if (username == 'community' && password == '1234') {
-      userProvider.login(UserRole.communityUser);
-    } else if (username == 'researcher' && password == '1234') {
-      userProvider.login(UserRole.researcher);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid username or password')),
+  Future<void> handleLogin() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final result = await AuthService.login(
+      email: emailController.text,
+      password: passwordController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (result['success'] == true) {
+      final userProvider = context.read<UserProvider>();
+      final navProvider = context.read<NavigationProvider>();
+
+      userProvider.loginWithDetails(
+        role: result['role'] as UserRole,
+        uid: result['uid'],
+        username: result['username'],
+        email: result['email'],
       );
-      return;
+      navProvider.configureRoutes(result['role'] as UserRole);
+      context.go('/home');
+    } else {
+      setState(() => _error = result['error']);
     }
-
-    navProvider.configureRoutes(userProvider.role);
-
-    debugPrint("ROLE: ${userProvider.role}");
-    debugPrint("ROUTES: ${navProvider.routes}");
-
-    context.go('/home');
   }
 
   @override
@@ -80,7 +102,6 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       CircleAvatar(
                         radius: 32,
@@ -116,11 +137,33 @@ class LoginScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
+                      // Error message
+                      if (_error != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDECEC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: const Border(
+                              left: BorderSide(
+                                  color: Color(0xFFE74C3C), width: 4),
+                            ),
+                          ),
+                          child: Text(
+                            _error!,
+                            style: const TextStyle(
+                                color: Color(0xFF9B2335), fontSize: 13),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
                       CustomTextField(
-                        label: 'Username',
-                        hint: 'Enter your username',
-                        icon: Icons.person,
-                        controller: usernameController,
+                        label: 'Email',
+                        hint: 'Enter your email',
+                        icon: Icons.email,
+                        controller: emailController,
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
@@ -132,11 +175,13 @@ class LoginScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
 
-                      PrimaryButton(
-                        text: "Login",
-                        icon: Icons.login,
-                        onPressed: () => handleLogin(context),
-                      ),
+                      _loading
+                          ? const CircularProgressIndicator()
+                          : PrimaryButton(
+                              text: "Login",
+                              icon: Icons.login,
+                              onPressed: handleLogin,
+                            ),
 
                       const SizedBox(height: 12),
 
@@ -146,60 +191,23 @@ class LoginScreen extends StatelessWidget {
                         onPressed: () => context.push('/register'),
                       ),
 
-                      const SizedBox(height: 8),
-
-                      GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Forgot Password functionality')),
-                          );
-                        },
-                        child: Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                              color: AppColors.primaryDark, fontSize: 14),
-                        ),
-                      ),
-
                       const SizedBox(height: 20),
 
-                      // Demo credentials — research roles
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentBg,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.borderSoft),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Demo Accounts",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primaryDark,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text("Don't have an account? "),
+                          GestureDetector(
+                            onTap: () => context.push('/register'),
+                            child: const Text(
+                              "Register here",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            _demoRow(
-                              Icons.people,
-                              "Community User",
-                              "community / 1234",
-                              "Traditional healer or IK holder in Thaba-Nchu",
-                            ),
-                            const SizedBox(height: 8),
-                            _demoRow(
-                              Icons.science,
-                              "Researcher",
-                              "researcher / 1234",
-                              "Analytics dashboard, species register, degradation alerts",
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -209,36 +217,6 @@ class LoginScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _demoRow(
-      IconData icon, String role, String credentials, String description) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: AppColors.primary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "$role — $credentials",
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-              Text(
-                description,
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

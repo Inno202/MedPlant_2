@@ -7,6 +7,8 @@ import '/constants/app_colors.dart';
 import '/widgets/custom_text_field.dart';
 import '/widgets/primary_button.dart';
 import '/widgets/outlined_button.dart';
+import '/services/auth_service.dart';
+import '/models/user_role.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -27,6 +29,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final provinceController = TextEditingController();
 
   String? passwordError;
+  bool _loading = false;
+  String? _error;
 
   bool validatePasswords() {
     if (passwordController.text != confirmPasswordController.text) {
@@ -42,14 +46,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  void handleRegister() {
-    if (!_formKey.currentState!.validate()) return;
-    if (!validatePasswords()) return;
+  Future<void> handleRegister() async {
+  if (!_formKey.currentState!.validate()) return;
+  if (!validatePasswords()) return;
 
+  setState(() {
+    _loading = true;
+    _error = null;
+  });
+
+  final result = await AuthService.register(
+    email: emailController.text,
+    password: passwordController.text,
+    username: usernameController.text,
+    contact: contactController.text,
+    country: countryController.text,
+    province: provinceController.text,
+
+    // default role
+    role: UserRole.communityUser,
+  );
+
+  if (!mounted) return;
+
+  setState(() {
+    _loading = false;
+  });
+
+  if (result['success'] == true) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Registration successful")),
+      const SnackBar(
+        content: Text("Registration successful"),
+      ),
     );
+
+    context.go('/login');
+  } else {
+    setState(() {
+      _error = result['error'];
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -161,6 +198,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         key: _formKey,
                         child: Column(
                           children: [
+                            if (_error != null) ...[
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    margin: const EdgeInsets.only(bottom: 16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFDECEC),
+      borderRadius: BorderRadius.circular(12),
+      border: const Border(
+        left: BorderSide(
+          color: AppColors.error,
+          width: 4,
+        ),
+      ),
+    ),
+    child: Text(
+      _error!,
+      style: const TextStyle(
+        color: AppColors.error,
+        fontSize: 13,
+      ),
+    ),
+  ),
+],
                             CustomTextField(
                               label: "Username",
                               hint: "Enter username",
@@ -256,12 +317,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                             const SizedBox(height: 24),
 
-                            PrimaryButton(
-                              text: "Register",
-                              icon: FontAwesomeIcons.check,
-                              onPressed: handleRegister,
-                            ),
-                            const SizedBox(height: 12),
+                            _loading
+    ? const CircularProgressIndicator()
+    : PrimaryButton(
+        text: "Register",
+        icon: FontAwesomeIcons.check,
+        onPressed: handleRegister,
+      ),
+const SizedBox(height: 18),
 
                             OutlinedButtonWidget(
                               text: "Cancel",

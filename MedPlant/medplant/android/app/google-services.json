@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "952348910877",
+    "project_id": "medplant-1",
+    "storage_bucket": "medplant-1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:952348910877:android:982d7b2ab471f466922df4",
+        "android_client_info": {
+          "package_name": "com.example.medplant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy5Ucbnzd4G84FWAE0KDFlHWn64ZqqgxY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -9,43 +9,19 @@ import 'package:medplant/widgets/empty_state_report.dart';
 import 'package:medplant/widgets/section_header.dart';
 import 'package:medplant/widgets/report_card.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:medplant/services/database_service.dart';
 
 class ViewReportsScreen extends StatelessWidget {
   const ViewReportsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<ReportModel> reports = [
-      ReportModel(
-        imageUrl: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6",
-        location: "Nairobi Forest",
-        date: "2024-01-15",
-        environment: "22°C, Humid",
-        description:
-            "Observed a healthy population of Agapanthus Africanus flowering near the river bank.",
-      ),
-      ReportModel(
-        imageUrl: "https://images.unsplash.com/photo-1502082553048-f009c37129b9",
-        location: "Mount Kenya Region",
-        date: "2024-01-20",
-        environment: "18°C, Light rain",
-        description:
-            "Knowltonia Capensis specimens found in shaded areas under indigenous trees. Several young plants observed.",
-      ),
-      ReportModel(
-        imageUrl: "https://images.unsplash.com/photo-1473773508845-188df298d2d1",
-        location: "Coastal Region",
-        date: "2024-01-25",
-        environment: "28°C, Sunny",
-        description:
-            "Lessertia frutescens thriving in well-drained soil. Traditional healer reported increased harvesting pressure.",
-      ),
-      // Add remaining reports as before
-    ];
+    
 
     final userProvider = Provider.of<UserProvider>(context);
     final role = userProvider.role;
-
+final width = MediaQuery.of(context).size.width;
     String? getButtonText() {
       switch (role) {
         case UserRole.communityUser:
@@ -80,65 +56,122 @@ class ViewReportsScreen extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 1200),
           padding: const EdgeInsets.all(16),
-          child: reports.isEmpty
-              ? const EmptyState()
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Section header with button on the far right
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const SectionHeader(title: "Observation Reports"),
-                        if (buttonText != null)
-                          ElevatedButton(
-                            onPressed: onButtonPressed,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary, 
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 20),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                            child: Text(
-                              buttonText,
-                              style: GoogleFonts.montserrat(
+          child: StreamBuilder<QuerySnapshot>(
+  stream: DatabaseService.getReportsStream(),
+  builder: (context, snapshot) {
+    // Loading
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    // Error
+    if (snapshot.hasError) {
+      return Center(
+        child: Text(
+          "Error loading reports",
+          style: GoogleFonts.montserrat(),
+        ),
+      );
+    }
+
+    final docs = snapshot.data?.docs ?? [];
+
+    // Empty state
+    if (docs.isEmpty) {
+      return const EmptyState();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const SectionHeader(
+              title: "Observation Reports",
+            ),
+
+            if (buttonText != null)
+              ElevatedButton(
+                onPressed: onButtonPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 20,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child: Text(
+                  buttonText,
+                  style: GoogleFonts.montserrat(
                     color: AppColors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 0.75,
-                        ),
-                        itemCount: reports.length,
-                        itemBuilder: (context, index) {
-                          final report = reports[index];
-
-                          return ReportCard(
-                            imageUrl: report.imageUrl,
-                            location: report.location,
-                            date: report.date,
-                            environment: report.environment,
-                            description: report.description,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
                 ),
+              ),
+          ],
+        ),
+
+        const SizedBox(height: 20),
+
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16),
+
+            
+
+gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+  crossAxisCount: width < 700 ? 1 : 2,
+  crossAxisSpacing: 16,
+  mainAxisSpacing: 16,
+  childAspectRatio: width < 700 ? 1.05 : 0.78,
+),
+
+            itemCount: docs.length,
+
+            itemBuilder: (context, index) {
+              final doc =
+                  docs[index].data() as Map<String, dynamic>;
+
+              return ReportCard(
+                imageUrl: '',
+                // Later replace with Cloudinary/Firebase URL
+
+                location:
+                    doc['location'] ?? 'Unknown location',
+
+                date:
+                    doc['submittedAt'] != null
+                        ? (doc['submittedAt']
+                                as Timestamp)
+                            .toDate()
+                            .toString()
+                            .split(' ')
+                            .first
+                        : 'No date',
+
+                environment:
+                    doc['environmentalCondition'] ??
+                        'Unknown',
+
+                description:
+                    doc['observerNotes'] ??
+                        'No description',
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  },
+),
         ),
       ),
     );
