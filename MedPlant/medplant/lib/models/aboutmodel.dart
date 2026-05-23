@@ -45,7 +45,7 @@ class AboutModel {
 /// ✅ Dummy data from your HTML
 final AboutModel dummyAbout = AboutModel(
   title: "Integrating indigenous knowledge & ICT",
-  subtitle: "... the ITIKI way ...",
+  subtitle: "... the MedPlant way ...",
 
   description1:
       "MedPlants is a platform that integrates indigenous knowledge and ICT tools to monitor medicinal plants. The platform allows users to report their observations of medicinal plants, including details such as the observation location, environmental conditions, and a description of the observation.",
@@ -57,7 +57,7 @@ final AboutModel dummyAbout = AboutModel(
       "The platform is designed to be user-friendly and accessible to a wide range of users, including field managers, researchers, and the general public. By leveraging indigenous knowledge and ICT tools, MedPlants seeks to empower communities to take an active role in the conservation and sustainable use of medicinal plants.",
 
   extraText:
-      "MedPlants is a collaborative effort that brings together experts in the fields of botany, ecology, and information technology. The platform is continuously being developed and improved to better serve the needs of its users and to contribute to the conservation of medicinal plants.\n\nThis project is part of the ITIKI initiative. For more information about the ITIKI platform and its features, please visit the ITIKI website.",
+      "MedPlants is a collaborative effort that brings together experts in the fields of botany, ecology, and information technology. The platform is continuously being developed and improved to better serve the needs of its users and to contribute to the conservation of medicinal plants.\n\nThis project is part of the MedPlant initiative. For more information about the MedPlant platform and its features, please visit the MedPlant website.",
 
-  itikiLink: "https://itiki.africa/",
+  itikiLink: "https://medplant.africa/",
 );

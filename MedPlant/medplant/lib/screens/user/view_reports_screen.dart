@@ -141,8 +141,8 @@ gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   docs[index].data() as Map<String, dynamic>;
 
               return ReportCard(
-                imageUrl: '',
-                // Later replace with Cloudinary/Firebase URL
+                // imageUrl: '',
+                imageUrl: doc['imageUrl'] ?? '',
 
                 location:
                     doc['location'] ?? 'Unknown location',

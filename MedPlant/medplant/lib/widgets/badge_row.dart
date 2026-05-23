@@ -9,7 +9,7 @@ class BadgeRow extends StatelessWidget {
   final List<_Badge> badges = const [
     _Badge(label: "Indigenous Knowledge", icon: Icons.eco),
     _Badge(label: "ICT Integration", icon: Icons.smartphone),
-    _Badge(label: "Conservation", icon: Icons.favorite),
+    // _Badge(label: "Conservation", icon: Icons.favorite),
     _Badge(label: "Community Based", icon: Icons.group),
     _Badge(label: "Monitoring", icon: Icons.show_chart),
   ];

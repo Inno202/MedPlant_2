@@ -46,7 +46,7 @@ class HeroSection extends StatelessWidget {
               const SizedBox(height: 8),
 
               Text(
-                "... the ITIKI Way ...",
+                "... The MedPlant Way ...",
                 style: GoogleFonts.dancingScript(
                   color: Colors.white70,
                   fontSize: 17,
@@ -60,8 +60,8 @@ class HeroSection extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
-                  _badge(Icons.eco, "12 Species Registered"),
-                  _badge(Icons.camera_alt, "87 Community Reports"),
+                  _badge(Icons.eco, "1 Species Registered"),
+                  _badge(Icons.camera_alt, "7 Community Reports"),
                   _badge(Icons.warning_amber, "2 Active Alerts"),
                 ],
               ),

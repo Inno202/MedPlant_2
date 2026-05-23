@@ -22,7 +22,7 @@ class AboutScreen extends StatelessWidget {
     final List<Map<String, dynamic>> badges = [
       {'icon': FontAwesomeIcons.leaf, 'text': 'Indigenous Knowledge'},
       {'icon': FontAwesomeIcons.mobileAlt, 'text': 'ICT Integration'},
-      {'icon': FontAwesomeIcons.heart, 'text': 'Conservation'},
+      // {'icon': FontAwesomeIcons.heart, 'text': 'Conservation'},
       {'icon': FontAwesomeIcons.users, 'text': 'Community Based'},
       {'icon': FontAwesomeIcons.chartLine, 'text': 'Monitoring'},
     ];
@@ -147,7 +147,7 @@ class AboutScreen extends StatelessWidget {
                         color: AppColors.white,
                       ),
                       label: Text(
-                        'Discover ITIKI',
+                        'Discover Medplant',
                         style: GoogleFonts.lato(
                           color: AppColors.white,
                         

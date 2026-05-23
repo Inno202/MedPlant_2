@@ -27,30 +27,30 @@ class UserHomeScreen extends StatelessWidget {
 
     // Thaba-Nchu registered medicinal species (from research survey)
     final List<PlantModel> plants = [
-      PlantModel(
-        name: "Agapanthus Africanus",
-        scientificName: "African Lily",
-        imageUrl:
-            "https://images.unsplash.com/photo-1501004318641-b39e6451bec6",
-        localName: "Ubani",
-        family: "Agapanthaceae",
-        conservationStatus: "Least Concern",
-        healthStatus: "Stressed",
-        trendDirection: "Declining",
-        locationArea: "Thaba-Nchu, Free State",
-      ),
-      PlantModel(
-        name: "Knowltonia Capensis",
-        scientificName: "Brandblare",
-        imageUrl:
-            "https://images.unsplash.com/photo-1501004318641-b39e6451bec6",
-        localName: "Umakhuthula",
-        family: "Ranunculaceae",
-        conservationStatus: "Vulnerable",
-        healthStatus: "Healthy",
-        trendDirection: "Stable",
-        locationArea: "Thaba-Nchu, Free State",
-      ),
+      // PlantModel(
+      //   name: "Agapanthus Africanus",
+      //   scientificName: "African Lily",
+      //   imageUrl:
+      //       "https://images.unsplash.com/photo-1501004318641-b39e6451bec6",
+      //   localName: "Ubani",
+      //   family: "Agapanthaceae",
+      //   conservationStatus: "Least Concern",
+      //   healthStatus: "Stressed",
+      //   trendDirection: "Declining",
+      //   locationArea: "Thaba-Nchu, Free State",
+      // ),
+      // PlantModel(
+      //   name: "Knowltonia Capensis",
+      //   scientificName: "Brandblare",
+      //   imageUrl:
+      //       "https://images.unsplash.com/photo-1501004318641-b39e6451bec6",
+      //   localName: "Umakhuthula",
+      //   family: "Ranunculaceae",
+      //   conservationStatus: "Vulnerable",
+      //   healthStatus: "Healthy",
+      //   trendDirection: "Stable",
+      //   locationArea: "Thaba-Nchu, Free State",
+      // ),
       PlantModel(
         name: "Lessertia Frutescens",
         scientificName: "Cancer Bush",
@@ -64,18 +64,18 @@ class UserHomeScreen extends StatelessWidget {
         locationArea: "Thaba-Nchu, Free State",
         damageLabels: ["Browning", "Lesions", "Stem damage"],
       ),
-      PlantModel(
-        name: "Hypoxis Hemerocallidea",
-        scientificName: "African Potato",
-        imageUrl:
-            "https://images.unsplash.com/photo-1501004318641-b39e6451bec6",
-        localName: "Inkomfe",
-        family: "Hypoxidaceae",
-        conservationStatus: "Vulnerable",
-        healthStatus: "Stressed",
-        trendDirection: "Improving",
-        locationArea: "Thaba-Nchu, Free State",
-      ),
+      // PlantModel(
+      //   name: "Hypoxis Hemerocallidea",
+      //   scientificName: "African Potato",
+      //   imageUrl:
+      //       "https://images.unsplash.com/photo-1501004318641-b39e6451bec6",
+      //   localName: "Inkomfe",
+      //   family: "Hypoxidaceae",
+      //   conservationStatus: "Vulnerable",
+      //   healthStatus: "Stressed",
+      //   trendDirection: "Improving",
+      //   locationArea: "Thaba-Nchu, Free State",
+      // ),
     ];
 
     return Scaffold(

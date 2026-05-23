@@ -49,6 +49,7 @@ class _ReportCardState extends State<ReportCard> {
 
     // Network image (fallback or older data)
     if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
+      print("IMAGE URL: ${widget.imageUrl}");
       return Image.network(
         widget.imageUrl!,
         height: 260,
@@ -284,26 +285,26 @@ class _ReportCardState extends State<ReportCard> {
 
                     const SizedBox(height: 10),
                     const Divider(color: AppColors.borderSoft),
-                    const SizedBox(height: 8),
+                    // const SizedBox(height: 8),
 
-                    const Row(
-                      children: [
-                        Icon(Icons.camera_alt,
-                            size: 14, color: AppColors.primary),
-                        SizedBox(width: 6),
-                        Text(
-                          "Read full report",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(width: 6),
-                        Icon(Icons.arrow_forward,
-                            size: 14, color: AppColors.primary),
-                      ],
-                    ),
+                    // const Row(
+                    //   children: [
+                    //     Icon(Icons.camera_alt,
+                    //         size: 14, color: AppColors.primary),
+                    //     SizedBox(width: 6),
+                    //     Text(
+                    //       "Read full report",
+                    //       style: TextStyle(
+                    //         fontSize: 12,
+                    //         color: AppColors.primary,
+                    //         fontWeight: FontWeight.w600,
+                    //       ),
+                    //     ),
+                    //     SizedBox(width: 6),
+                    //     Icon(Icons.arrow_forward,
+                    //         size: 14, color: AppColors.primary),
+                    //   ],
+                    // ),
                   ],
                 ),
               ),

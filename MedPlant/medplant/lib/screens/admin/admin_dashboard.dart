@@ -69,10 +69,10 @@ class AdminDashboardScreen extends StatelessWidget {
     return LayoutBuilder(builder: (context, constraints) {
       final isNarrow = constraints.maxWidth < 500;
       final cards = [
-        _statCard("Registered Species", "12", Icons.eco, AppColors.primary),
-        _statCard("Total Submissions", "87", Icons.camera_alt, AppColors.primarySoft),
+        _statCard("Registered Species", "1", Icons.eco, AppColors.primary),
+        _statCard("Total Submissions", "7", Icons.camera_alt, AppColors.primarySoft),
         _statCard("Active Alerts", "2", Icons.warning, const Color(0xFFE74C3C)),
-        _statCard("Community Users", "34", Icons.people, AppColors.primaryDark),
+        _statCard("Community Users", "4", Icons.people, AppColors.primaryDark),
       ];
       return isNarrow
           ? GridView.count(

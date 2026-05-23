@@ -14,6 +14,13 @@ import 'package:medplant/widgets/custom_dropdown.dart';
 import 'package:medplant/widgets/custom_text_field.dart';
 import 'dart:convert';
 import 'package:medplant/services/database_service.dart';
+import 'package:medplant/services/cloudinary_service.dart';
+
+typedef SpeciesIdentificationResult = FullPipelineResult;
+
+extension SpeciesIdentificationResultExtras on FullPipelineResult {
+  String get message => predictionNote;
+}
 
 enum _IDState { idle, loading, identified, notIdentified, serverError }
 
@@ -63,7 +70,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
     });
 
     // F1 only — species identification
-    final result = await MLService.identifySpecies(
+    final result = await MLService.runFullPipelineFromBytes(
       bytes,
       fileName: picked.name,
     );
@@ -591,7 +598,26 @@ class _AddReportScreenState extends State<AddReportScreen> {
 
         try {
           // Convert image to base64
-          final imageBase64 = base64Encode(_imageBytes!);
+          final imageUrl =
+    await CloudinaryService.uploadImage(
+  _imageBytes!,
+);
+
+if (imageUrl == null) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        "Failed to upload image",
+      ),
+    ),
+  );
+
+  setState(() {
+    _submitting = false;
+  });
+
+  return;
+}
 
           final result = await DatabaseService.submitReport(
             speciesName:
@@ -628,7 +654,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
 
             severity: _severity,
 
-            imageBase64: imageBase64,
+            imageUrl: imageUrl,
           );
 
           if (!mounted) return;

@@ -31,7 +31,7 @@ class DatabaseService {
     required String degradationIndicator,
     required String observerNotes,
     required String severity,
-    String? imageBase64,  // base64 encoded image string
+    String? imageUrl,  // URL of the image
   }) async {
     try {
       final uid = AuthService.currentUserId;
@@ -56,7 +56,7 @@ class DatabaseService {
         'observerNotes': observerNotes,
         'severity': severity,
         // Image
-        'imageBase64': imageBase64 ?? '',
+        'imageUrl': imageUrl ?? '',
         // Metadata
         'status': identified ? 'submitted' : 'flagged',
         'submittedAt': FieldValue.serverTimestamp(),

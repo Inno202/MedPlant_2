@@ -34,7 +34,7 @@ final ContactModel dummyContact = ContactModel(
   intro:
       'For collaboration, research partnerships, or general enquiries — drop us a message.',
   phone: '+254 (0) 700 000 000',
-  contactEmail: 'info@itiki.africa',
+  contactEmail: 'info@medplant.africa',
   badges: [
     {'icon': FontAwesomeIcons.handshake, 'text': 'Collaboration'},
     {'icon': FontAwesomeIcons.flask, 'text': 'Research'},

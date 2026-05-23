@@ -11,8 +11,8 @@ final List<Capability> coreCapabilities = [
   Capability(
     title: "ML-Powered Plant Identification",
     items: [
-      "Random Forest Species ID (Function 1)",
-      "TensorFlow Lite on-device inference",
+      "Random Forest Species Classification",
+      "Confidence Scoring (0.0–1.0)",
       "Registered Thaba-Nchu species list",
     ],
   ),
