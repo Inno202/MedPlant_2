@@ -111,23 +111,23 @@ class _ReportCardState extends State<ReportCard> {
                     ),
                   ),
 
-                  const Positioned(
-                    bottom: 10,
-                    left: 12,
-                    child: Row(
-                      children: [
-                        Icon(Icons.search, color: Colors.white, size: 16),
-                        SizedBox(width: 6),
-                        Text(
-                          "Click to enlarge",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // const Positioned(
+                  //   bottom: 10,
+                  //   left: 12,
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(Icons.search, color: Colors.white, size: 16),
+                  //       SizedBox(width: 6),
+                  //       Text(
+                  //         "Click to enlarge",
+                  //         style: TextStyle(
+                  //           color: Colors.white,
+                  //           fontSize: 12,
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
               ),
 

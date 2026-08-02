@@ -1,23 +1,12 @@
 // lib/services/database_service.dart
-// All Firestore read/write operations.
-// Collections:
-//   users/           — user profiles
-//   plant_reports/   — community submissions + ML results
-//   species/         — registered medicinal species register
-//   degradation_alerts/ — researcher early-warning alerts
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 
-
 class DatabaseService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // PLANT REPORTS
-  // ────────────────────────────────────────────────────────────────────────────
-
-  /// Submit a new plant report with ML results
+  // ── Submit report ────────────────────────────────────────────────────────
   static Future<String?> submitReport({
     required String speciesName,
     required bool identified,
@@ -31,39 +20,37 @@ class DatabaseService {
     required String degradationIndicator,
     required String observerNotes,
     required String severity,
-    String? imageUrl,  // URL of the image
+    String? imageUrl,
   }) async {
     try {
       final uid = AuthService.currentUserId;
       if (uid == null) return null;
+
+      final bool isFlagged = !identified;
+      final String reviewStatus = identified ? 'approved' : 'pending';
 
       final docRef = await _db.collection('plant_reports').add({
         'submittedBy': uid,
         'speciesName': speciesName,
         'identified': identified,
         'confidence': confidence,
-        // F2 — health classification
         'healthStatus': healthStatus,
         'trendDirection': trendDirection,
-        // F3 — damage detection
         'damageLabels': damageLabels,
         'damageDetected': damageLabels.isNotEmpty,
         'predictionNote': predictionNote,
-        // Form fields
         'location': location,
         'environmentalCondition': environmentalCondition,
         'degradationIndicator': degradationIndicator,
         'observerNotes': observerNotes,
         'severity': severity,
-        // Image
         'imageUrl': imageUrl ?? '',
-        // Metadata
-        'status': identified ? 'submitted' : 'flagged',
+        'isFlagged': isFlagged,
+        'reviewStatus': reviewStatus,
         'submittedAt': FieldValue.serverTimestamp(),
         'locationArea': 'Thaba-Nchu, Free State',
       });
 
-      // Update degradation alert if health is Degraded
       if (identified && healthStatus == 'Degraded') {
         await _checkAndCreateAlert(speciesName);
       }
@@ -74,7 +61,19 @@ class DatabaseService {
     }
   }
 
-  /// Stream of all reports — used by ViewReportsScreen
+  // ── Visibility helper (used everywhere) ──────────────────────────────────
+  /// A document is visible in the main feed if:
+  ///   - it has no reviewStatus field (legacy doc, written before this change)
+  ///   - OR reviewStatus == 'approved'
+  static bool isReportVisible(Map<String, dynamic> data) {
+    final reviewStatus = data['reviewStatus'] as String?;
+    if (reviewStatus == null) return true; // legacy doc → always show
+    return reviewStatus == 'approved';
+  }
+
+  // ── Main reports feed (ViewReportsScreen) ─────────────────────────────────
+  /// Fetches ALL docs ordered by date; the widget filters with isReportVisible().
+  /// This avoids composite index requirements and handles legacy documents.
   static Stream<QuerySnapshot> getReportsStream() {
     return _db
         .collection('plant_reports')
@@ -82,7 +81,6 @@ class DatabaseService {
         .snapshots();
   }
 
-  /// Stream of current user's reports only
   static Stream<QuerySnapshot> getUserReportsStream() {
     final uid = AuthService.currentUserId;
     if (uid == null) return const Stream.empty();
@@ -93,40 +91,38 @@ class DatabaseService {
         .snapshots();
   }
 
-  /// Stream of flagged reports for researcher review
-  static Stream<QuerySnapshot> getFlaggedReportsStream() {
+  // ── Pending queue (ApproveReportsScreen) ──────────────────────────────────
+  // Single-field query only — no composite index needed.
+  // The UI sorts client-side if ordering matters.
+  static Stream<QuerySnapshot> getPendingFlaggedReportsStream() {
     return _db
         .collection('plant_reports')
-        .where('status', isEqualTo: 'flagged')
-        .orderBy('submittedAt', descending: true)
+        .where('reviewStatus', isEqualTo: 'pending')
         .snapshots();
   }
 
-  /// Approve a flagged report
+  // ── Researcher actions ────────────────────────────────────────────────────
   static Future<void> approveReport(String reportId) async {
     await _db.collection('plant_reports').doc(reportId).update({
-      'status': 'approved',
-      'approvedAt': FieldValue.serverTimestamp(),
+      'isFlagged': false,
+      'reviewStatus': 'approved',
+      'reviewedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  /// Reject a flagged report
-  static Future<void> rejectReport(String reportId) async {
+  static Future<void> declineReport(String reportId) async {
     await _db.collection('plant_reports').doc(reportId).update({
-      'status': 'rejected',
+      'isFlagged': true,
+      'reviewStatus': 'declined',
+      'reviewedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // SPECIES REGISTER
-  // ────────────────────────────────────────────────────────────────────────────
-
-  /// Stream of registered species — used by home screen plant grid
+  // ── Species register ──────────────────────────────────────────────────────
   static Stream<QuerySnapshot> getSpeciesStream() {
     return _db.collection('species').snapshots();
   }
 
-  /// Seed initial species register (call once from researcher dashboard)
   static Future<void> seedSpeciesRegister() async {
     final batch = _db.batch();
     final species = [
@@ -148,11 +144,7 @@ class DatabaseService {
     await batch.commit();
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // HEALTH HISTORY — for F2 trend calculation
-  // ────────────────────────────────────────────────────────────────────────────
-
-  /// Get prior health scores for a species (used to pass to ML server)
+  // ── Health history ─────────────────────────────────────────────────────────
   static Future<String> getPriorScores(String speciesName) async {
     try {
       final snapshot = await _db
@@ -163,8 +155,11 @@ class DatabaseService {
           .limit(10)
           .get();
 
-      final scores = snapshot.docs.map((doc) {
-        final health = doc['healthStatus'] ?? 'Healthy';
+      final scores = snapshot.docs
+          .where((d) => isReportVisible(d.data() as Map<String, dynamic>))
+          .map((doc) {
+        final health =
+            (doc.data() as Map<String, dynamic>)['healthStatus'] ?? 'Healthy';
         if (health == 'Degraded') return '0.8';
         if (health == 'Stressed') return '0.5';
         return '0.2';
@@ -176,11 +171,7 @@ class DatabaseService {
     }
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // DEGRADATION ALERTS
-  // ────────────────────────────────────────────────────────────────────────────
-
-  /// Check if species has 3+ Degraded reports → create/update alert
+  // ── Degradation alerts ────────────────────────────────────────────────────
   static Future<void> _checkAndCreateAlert(String speciesName) async {
     try {
       final snapshot = await _db
@@ -189,10 +180,11 @@ class DatabaseService {
           .where('healthStatus', isEqualTo: 'Degraded')
           .get();
 
-      final count = snapshot.docs.length;
+      final count = snapshot.docs
+          .where((d) => isReportVisible(d.data() as Map<String, dynamic>))
+          .length;
 
       if (count >= 3) {
-        // Check if alert already exists
         final existing = await _db
             .collection('degradation_alerts')
             .where('speciesName', isEqualTo: speciesName)
@@ -210,7 +202,6 @@ class DatabaseService {
             'alertDate': FieldValue.serverTimestamp(),
           });
         } else {
-          // Update existing alert count
           await existing.docs.first.reference.update({
             'degradedCount': count,
             'degradationIndex': (count / 10).clamp(0.0, 1.0),
@@ -218,11 +209,10 @@ class DatabaseService {
         }
       }
     } catch (e) {
-      // Silent fail — alert creation is non-critical
+      // Silent fail
     }
   }
 
-  /// Stream of degradation alerts for researcher dashboard
   static Stream<QuerySnapshot> getAlertsStream() {
     return _db
         .collection('degradation_alerts')
@@ -230,21 +220,24 @@ class DatabaseService {
         .snapshots();
   }
 
-  /// Acknowledge an alert
   static Future<void> acknowledgeAlert(String alertId) async {
     await _db.collection('degradation_alerts').doc(alertId).update({
       'notificationStatus': 'Acknowledged',
     });
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // DASHBOARD STATS
-  // ────────────────────────────────────────────────────────────────────────────
-
-  /// Get summary counts for researcher dashboard
+  // ── Dashboard stats ───────────────────────────────────────────────────────
   static Future<Map<String, int>> getDashboardStats() async {
     try {
-      final reports = await _db.collection('plant_reports').get();
+      final allReports = await _db.collection('plant_reports').get();
+      final approvedCount = allReports.docs
+          .where((d) => isReportVisible(d.data() as Map<String, dynamic>))
+          .length;
+      final pendingCount = allReports.docs
+          .where((d) =>
+              (d.data() as Map<String, dynamic>)['reviewStatus'] == 'pending')
+          .length;
+
       final alerts = await _db
           .collection('degradation_alerts')
           .where('notificationStatus', isEqualTo: 'Pending')
@@ -253,7 +246,8 @@ class DatabaseService {
       final species = await _db.collection('species').get();
 
       return {
-        'totalReports': reports.docs.length,
+        'totalReports': approvedCount,
+        'pendingReports': pendingCount,
         'activeAlerts': alerts.docs.length,
         'totalUsers': users.docs.length,
         'registeredSpecies': species.docs.length,
@@ -261,6 +255,7 @@ class DatabaseService {
     } catch (e) {
       return {
         'totalReports': 0,
+        'pendingReports': 0,
         'activeAlerts': 0,
         'totalUsers': 0,
         'registeredSpecies': 0,

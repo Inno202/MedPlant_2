@@ -28,7 +28,7 @@ final List<Capability> coreCapabilities = [
     title: "Damage Detection",
     items: [
       "Leaf discolouration & wilting",
-      "Browning, lesions & stem damage",
+      "Browning & lesions",
       "Multi-label detection per submission",
     ],
   ),

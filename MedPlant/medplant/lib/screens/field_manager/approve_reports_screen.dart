@@ -1,5 +1,9 @@
+// lib/screens/field_manager/approve_reports_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:medplant/models/observation_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:medplant/services/database_service.dart';
 import 'package:medplant/widgets/section_header.dart';
 import '/constants/app_colors.dart';
 
@@ -7,95 +11,228 @@ class ApproveReportsScreen extends StatefulWidget {
   const ApproveReportsScreen({super.key});
 
   @override
-  State<ApproveReportsScreen> createState() =>
-      _ApproveReportsScreenState();
+  State<ApproveReportsScreen> createState() => _ApproveReportsScreenState();
 }
 
 class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
   final PageController _pageController = PageController();
-  int currentIndex = 0;
+  int _currentIndex = 0;
 
-  final List<ObservationModel> observations = [
-    ObservationModel(
-      observerName: "Mary Wanjiku",
-      date: "2024-02-15",
-      location: "Nairobi Forest",
-      temperature: "22°C, Humidity 65%",
-      description:
-          "Observed a healthy population of Agapanthus Africanus flowering near the river bank. Soil moisture appears optimal and several new shoots are emerging.",
-      imageUrl:
-          "https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=800",
-    ),
-    ObservationModel(
-      observerName: "John Mwangi",
-      date: "2024-02-14",
-      location: "Mount Kenya",
-      temperature: "18°C, Light rain",
-      description:
-          "Knowltonia Capensis specimens found in shaded areas under indigenous trees. Multiple mature plants with flowers observed.",
-      imageUrl:
-          "https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=800",
-    ),
-  ];
-
-  void approve() {
-    final obs = observations[currentIndex];
-
+  Future<void> _approve(String docId, String speciesName) async {
+    await DatabaseService.approveReport(docId);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("Approved: ${obs.observerName} (${obs.location})"),
+        content: Text("✅ Approved — $speciesName added to reports feed"),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _decline(String docId, String speciesName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Decline report?"),
+        content: Text(
+          "This report for '$speciesName' will be permanently hidden. "
+          "This cannot be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Decline",
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await DatabaseService.declineReport(docId);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("❌ Report declined and removed from queue"),
+        backgroundColor: Colors.redAccent,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (observations.isEmpty) {
-      return Scaffold(
-        
-        body: const Center(
-          child: Text("No reports pending approval"),
-        ),
-      );
-    }
-
     return Scaffold(
-    
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(left: 16, ),
-            child: SectionHeader(title: "Approve Reports"),
-          ),
+      body: StreamBuilder<QuerySnapshot>(
+        // Single-field query — no composite index needed
+        stream: DatabaseService.getPendingFlaggedReportsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          // 🔥 SWIPEABLE CAROUSEL
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: observations.length,
-              onPageChanged: (index) {
-                setState(() => currentIndex = index);
-              },
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildReportCard(observations[index]),
-                );
-              },
-            ),
-          ),
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Failed to load pending reports.",
+                      style: GoogleFonts.montserrat(
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "${snapshot.error}",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
-          _buildDots(),
+          final docs = snapshot.data?.docs ?? [];
 
-          _buildApproveButton(),
-        ],
+          if (docs.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          final safeIndex = _currentIndex.clamp(0, docs.length - 1);
+          if (safeIndex != _currentIndex) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _currentIndex = safeIndex);
+            });
+          }
+
+          final currentDoc = docs[safeIndex];
+          final currentData =
+              currentDoc.data() as Map<String, dynamic>;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(left: 16, top: 8),
+                child: SectionHeader(title: "Pending Reports"),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3CD),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: Text(
+                    "${docs.length} report${docs.length == 1 ? '' : 's'} awaiting review",
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF856404),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: docs.length,
+                  onPageChanged: (index) =>
+                      setState(() => _currentIndex = index),
+                  itemBuilder: (context, index) {
+                    final data =
+                        docs[index].data() as Map<String, dynamic>;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child:
+                          _buildReportCard(docs[index].id, data),
+                    );
+                  },
+                ),
+              ),
+
+              _buildDots(docs.length),
+              _buildActionButtons(
+                currentDoc.id,
+                currentData['speciesName'] ?? 'Unknown species',
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  // 🔥 SCROLLABLE CARD (IMAGE INCLUDED)
-  Widget _buildReportCard(ObservationModel obs) {
+  Widget _buildEmptyState() {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.borderSoft),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle_outline,
+                size: 64, color: AppColors.primarySoft),
+            const SizedBox(height: 16),
+            Text(
+              "All reports reviewed",
+              style: GoogleFonts.montserrat(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "No pending flagged submissions.\nNew unidentified reports will appear here.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportCard(String docId, Map<String, dynamic> data) {
+    final imageUrl = data['imageUrl'] ?? '';
+    final location = data['location'] ?? 'Unknown';
+    final environment = data['environmentalCondition'] ?? 'Unknown';
+    final notes = data['observerNotes'] ?? 'No notes';
+    final speciesName = data['speciesName'] ?? 'Unknown species';
+    final confidence =
+        ((data['confidence'] ?? 0.0) * 100).toStringAsFixed(0);
+    final severity = data['severity'] ?? '1';
+    final indicator = data['degradationIndicator'] ?? 'None';
+    final submittedAt = data['submittedAt'] as Timestamp?;
+    final dateStr = submittedAt != null
+        ? submittedAt.toDate().toString().split(' ').first
+        : 'Unknown date';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -112,55 +249,92 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // TOP STRIP
+            // Orange top strip — indicates unreviewed
             Container(
               height: 8,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.primarySoft],
+                  colors: [Colors.orange, Colors.deepOrange],
                 ),
                 borderRadius:
                     BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
 
-            // IMAGE
+            // Warning banner
             Container(
-              padding: const EdgeInsets.all(20),
-              color: AppColors.accentBg,
-              child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: obs.imageUrl.isEmpty
-                      ? const SizedBox(
-                          height: 200,
-                          child: Center(
-                            child: Icon(Icons.image, size: 80),
-                          ),
-                        )
-                      : Image.network(
-                          obs.imageUrl,
-                          fit: BoxFit.cover,
-                        ),
-                ),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 10),
+              color: const Color(0xFFFFF3CD),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.orange, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "ML could not identify the plant species — flagged for review",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF856404),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // DETAILS
+            // Image
+            if (imageUrl.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                color: AppColors.accentBg,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 150,
+                      color: AppColors.borderSoft,
+                      child: const Center(
+                        child: Icon(Icons.image_not_supported),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                height: 120,
+                color: AppColors.accentBg,
+                child: const Center(
+                  child: Icon(Icons.camera_alt,
+                      size: 48, color: AppColors.primarySoft),
+                ),
+              ),
+
+            // Details
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _detailCard(Icons.person, "Observer", obs.observerName),
-                  _detailCard(
-                    Icons.calendar_today,
-                    "Observed On",
-                    "${obs.date} • ${obs.location}",
-                  ),
-                  _detailCard(Icons.thermostat,
-                      "Environmental Condition", obs.temperature),
-                  _detailCard(
-                      Icons.description, "Description", obs.description),
+                  _detailRow(
+                      Icons.calendar_today, "Submitted", dateStr),
+                  _detailRow(
+                      Icons.location_on, "Location", location),
+                  _detailRow(
+                      Icons.cloud, "Environment", environment),
+                  _detailRow(Icons.search, "Species suggested",
+                      "$speciesName ($confidence% conf.)"),
+                  _detailRow(Icons.warning,
+                      "Degradation indicator", indicator),
+                  _detailRow(Icons.speed,
+                      "Severity reported", "$severity / 5"),
+                  _detailRow(
+                      Icons.notes, "Observer notes", notes),
                 ],
               ),
             ),
@@ -170,48 +344,42 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
     );
   }
 
-  // 🔥 DETAIL ITEM
-  Widget _detailCard(IconData icon, String title, String value) {
+  Widget _detailRow(IconData icon, String label, String value) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.borderSoft),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.04),
-            blurRadius: 8,
-          ),
+              color: Color.fromRGBO(0, 0, 0, 0.03), blurRadius: 6),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.primary),
+          Icon(icon, color: AppColors.primary, size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title.toUpperCase(),
+                  label.toUpperCase(),
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     letterSpacing: 0.8,
                     color: Colors.grey,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                const SizedBox(height: 3),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -220,15 +388,13 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
     );
   }
 
-  // 🔥 DOT INDICATOR
-  Widget _buildDots() {
+  Widget _buildDots(int count) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(observations.length, (index) {
-          final isActive = index == currentIndex;
-
+        children: List.generate(count, (index) {
+          final isActive = index == _currentIndex;
           return AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -236,8 +402,9 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
             height: isActive ? 12 : 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color:
-                  isActive ? AppColors.primary : AppColors.borderSoft,
+              color: isActive
+                  ? AppColors.primary
+                  : AppColors.borderSoft,
             ),
           );
         }),
@@ -245,43 +412,54 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
     );
   }
 
-  // 🔥 APPROVE BUTTON ONLY
-  Widget _buildApproveButton() {
+  Widget _buildActionButtons(String docId, String speciesName) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: AppColors.borderSoft),
-        ),
+        border:
+            Border(top: BorderSide(color: AppColors.borderSoft)),
       ),
-      child: GestureDetector(
-        onTap: approve,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.primarySoft],
-            ),
-            borderRadius: BorderRadius.circular(40),
-            boxShadow: const [
-              BoxShadow(
-                color: Color.fromRGBO(15, 74, 56, 0.3),
-                blurRadius: 15,
-              )
-            ],
-          ),
-          child: const Center(
-            child: Text(
-              "Approve Report",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14),
+                side: const BorderSide(color: Colors.red, width: 2),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40)),
               ),
+              onPressed: () => _decline(docId, speciesName),
+              icon: const Icon(Icons.close,
+                  color: Colors.red, size: 18),
+              label: const Text("Decline",
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold)),
             ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40)),
+              ),
+              onPressed: () => _approve(docId, speciesName),
+              icon: const Icon(Icons.check,
+                  color: Colors.white, size: 18),
+              label: const Text("Approve",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
     );
   }

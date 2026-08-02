@@ -23,7 +23,7 @@ class PlantGrid extends StatelessWidget {
     final crossAxisSpacing = 12.0;
     final mainAxisSpacing = 12.0;
     final cardWidth = (screenWidth - ((columns - 1) * crossAxisSpacing)) / columns;
-    final cardHeight = cardWidth * 1.1; // slight taller for text & image
+    final cardHeight = cardWidth * 1; // slight taller for text & image
     final childAspectRatio = cardWidth / cardHeight;
 
     return GridView.builder(

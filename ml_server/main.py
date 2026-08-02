@@ -317,7 +317,7 @@ def _build_contextual_result(
     if observer_notes.strip():
         parts.append(
             f"Observer noted: \"{observer_notes[:200]}\". "
-            "This IK contribution has been recorded in alignment with the ITIKI methodology."
+            #"This IK contribution has been recorded in alignment with the ITIKI methodology."
         )
     parts.append(
         f"Overall risk: {risk_level.upper()} (alert score {alert_score}/10). "
@@ -486,7 +486,7 @@ async def contextual_analysis_url(
 async def identify_species(file: UploadFile = File(...)):
     img_bytes = await file.read()
     img = decode_image(img_bytes)
-    result_str = identifier.predict_plant(img, confidence_threshold=0.80)
+    result_str = identifier.predict_plant(img, confidence_threshold=0.70)
     if "not identified" in result_str.lower() or "error" in result_str.lower():
         return IdentificationResult(
             species="Unknown", confidence=0.0, identified=False,
