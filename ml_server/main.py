@@ -107,7 +107,7 @@ async def fetch_image_from_url(url: str) -> np.ndarray:
 
 
 def _image_health_score(img: np.ndarray) -> float:
-    """Returns 0.0 (green/healthy) → 1.0 (brown-yellow/degraded)."""
+    """Returns 0.0 (green/healthy) → 1.0 (browning/stressed leaf appearance)."""
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     total_px = img.shape[0] * img.shape[1]
     green_r  = np.sum(cv2.inRange(hsv, (35, 40, 40), (85, 255, 255)) > 0) / total_px
@@ -117,7 +117,15 @@ def _image_health_score(img: np.ndarray) -> float:
     return min(score, 1.0)
 
 
-def _detect_damage_labels(img: np.ndarray, hsv: np.ndarray) -> list:
+def _detect_leaf_indicators(img: np.ndarray, hsv: np.ndarray) -> list:
+    """
+    Visual indicators supporting a 'Stressed' leaf-health call.
+    NOTE: these are supporting evidence for F2, not a standalone damage
+    verdict — a single indicator does not by itself mean the plant/species
+    is degrading. Population-level degradation is a trend judgement (F3),
+    made in database_service.dart once a species accumulates repeated
+    Stressed reports.
+    """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     total_px = img.shape[0] * img.shape[1]
     labels = []
@@ -139,8 +147,15 @@ def _detect_damage_labels(img: np.ndarray, hsv: np.ndarray) -> list:
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
     if np.mean(np.abs(sobely)) > 0:
         if np.mean(np.abs(sobelx)) / (np.mean(np.abs(sobely)) + 1e-6) > 1.8:
-            labels.append("Stem damage")
+            labels.append("Stem irregularity")
     return labels
+
+
+# Backward-compat alias so /predict/damage and any old call sites still work
+_detect_damage_labels = _detect_leaf_indicators
+
+
+HEALTH_THRESHOLD = 0.40  # blended score >= this → Stressed
 
 
 def _build_contextual_result(
@@ -152,11 +167,11 @@ def _build_contextual_result(
     reported_severity: str,
     location: str,
 ) -> dict:
-    """Core logic shared by /predict/contextual_url (and the bytes variant)."""
+    """Core F2 (leaf health) + F3 (trend/monitoring) logic, shared by endpoints."""
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     total_px = img.shape[0] * img.shape[1]
 
-    # ── F2: health score ──────────────────────────────────────────────────────
+    # ── F2: leaf health (binary) ──────────────────────────────────────────────
     img_score = _image_health_score(img)
 
     prior_list: list[float] = []
@@ -178,11 +193,8 @@ def _build_contextual_result(
     # 60% image signal, 40% observer-reported severity
     blended = img_score * 0.6 + reported_sev_score * 0.4
 
-    health_status = (
-        "Healthy" if blended < 0.25 else
-        "Stressed" if blended < 0.60 else
-        "Degraded"
-    )
+    # BINARY classification — no per-image "Degraded"
+    health_status = "Stressed" if blended >= HEALTH_THRESHOLD else "Healthy"
 
     if len(all_scores) >= 3:
         slope = all_scores[-1] - all_scores[-3]
@@ -190,24 +202,24 @@ def _build_contextual_result(
     else:
         trend = "Stable"
 
-    # ── F3: damage detection + report augmentation ───────────────────────────
-    damage_labels = _detect_damage_labels(img, hsv)
+    # ── Supporting leaf indicators (only meaningful when Stressed) ────────────
+    leaf_indicators = _detect_leaf_indicators(img, hsv) if health_status == "Stressed" else []
 
     indicator_map = {
-        "Over-harvesting": "Over-harvesting signs",
-        "Pollution": "Pollution stress",
-        "Flooding": "Water stress",
-        "Fire damage": "Fire damage",
-        "Invasive species nearby": "Competition stress",
-        "Drought stress": "Drought stress",
-        "Land use change": "Habitat disturbance",
+        "Over-harvesting": "Over-harvesting signs reported",
+        "Pollution": "Pollution stress reported",
+        "Flooding": "Water stress reported",
+        "Fire damage": "Fire damage reported",
+        "Invasive species nearby": "Competition stress reported",
+        "Drought stress": "Drought stress reported",
+        "Land use change": "Habitat disturbance reported",
     }
-    if degradation_indicator in indicator_map:
+    if health_status == "Stressed" and degradation_indicator in indicator_map:
         extra = indicator_map[degradation_indicator]
-        if extra not in damage_labels:
-            damage_labels.append(extra)
+        if extra not in leaf_indicators:
+            leaf_indicators.append(extra)
 
-    severity_score = len(damage_labels) / 7.0
+    severity_score = len(leaf_indicators) / 7.0
 
     # ── Factor breakdown ──────────────────────────────────────────────────────
     green_r  = np.sum(cv2.inRange(hsv, (35, 40, 40), (85, 255, 255)) > 0) / total_px
@@ -231,16 +243,16 @@ def _build_contextual_result(
             f"{environmental_condition} — " + {
                 "Hot": "High temperature stress likely. Heat accelerates desiccation.",
                 "Dry": "Drought conditions. Water deficit is a primary stressor.",
-                "Frost": "Frost exposure can cause tissue death and wilting.",
+                "Frost": "Frost exposure can cause tissue stress and wilting.",
                 "Cold": "Cold stress may slow growth and increase disease susceptibility.",
                 "Wet / After rain": "Recent rainfall beneficial but may increase fungal risk.",
                 "Windy": "Wind stress can cause physical damage and increase transpiration losses.",
             }.get(environmental_condition, "Conditions within normal range.")
         ),
-        "Reported degradation indicator": (
+        "Reported context": (
             f"{degradation_indicator} — "
-            + ("No external degradation reported." if degradation_indicator == "None observed"
-               else f"Community-reported: {degradation_indicator}. Recognised threat to "
+            + ("No external stressor reported." if degradation_indicator == "None observed"
+               else f"Community-reported: {degradation_indicator}. Recognised pressure on "
                "Lessertia frutescens in the Free State (Vukeya et al., 2024).")
         ),
         "Reported severity": (
@@ -250,24 +262,27 @@ def _build_contextual_result(
                 "Minor stress reported by observer.",
                 "Moderate stress reported by observer.",
                 "Severe stress reported — verification recommended.",
-                "Critical condition — researcher alert required.",
+                "Very severe — priority monitoring recommended.",
               ][sev_int - 1]
         ),
-        "F3 damage labels": (
-            f"{', '.join(damage_labels)} — Multi-label damage types detected."
-            if damage_labels else "No damage types detected in image."
+        "F2 leaf indicators": (
+            f"{', '.join(leaf_indicators)} — supporting evidence for the Stressed classification."
+            if leaf_indicators else "No stress indicators present — leaf appears healthy."
         ),
     }
     if observer_notes.strip():
         factor_breakdown["Observer notes"] = (
             f"'{observer_notes[:120]}{'…' if len(observer_notes) > 120 else ''}' — "
-            "IK holder observation recorded and factored into risk assessment."
+            "IK holder observation recorded and factored into the assessment."
         )
 
-    # ── Risk & alert score ────────────────────────────────────────────────────
+    # ── Monitoring priority score (NOT a plant-status label) ─────────────────
+    # Signals to the researcher how much attention this submission deserves.
+    # This is deliberately separate from health_status — it never overrides
+    # the binary Healthy/Stressed call, it just ranks follow-up urgency.
     alert_score = 0
     alert_score += min(3, int(blended * 4))
-    alert_score += min(3, len(damage_labels))
+    alert_score += min(3, len(leaf_indicators))
     alert_score += min(2, sev_int - 1)
     if trend == "Declining":
         alert_score += 1
@@ -285,58 +300,47 @@ def _build_contextual_result(
     # ── Comprehensive report paragraph ────────────────────────────────────────
     loc_str = f" in {location}" if location.strip() else " in Thaba-Nchu"
     parts = [
-        f"Analysis of Lessertia frutescens (Cancer Bush){loc_str} "
-        f"(ML F2 + F3 · {prior_count} prior submission(s)).",
+        f"Leaf health assessment of Lessertia frutescens (Cancer Bush){loc_str} "
+        f"(F2 + F3 · {prior_count} prior submission(s)).",
         "",
-        f"Image health score: {img_score:.2f} · Reported severity: {sev_int}/5 · "
-        f"Blended score: {blended:.2f}. Classification: {health_status.upper()} · Trend: {trend}.",
+        f"Image score: {img_score:.2f} · Reported severity: {sev_int}/5 · "
+        f"Blended score: {blended:.2f}. Leaf classification: {health_status.upper()} · "
+        f"Monitoring trend: {trend}.",
     ]
     if environmental_condition not in ("Normal",):
         parts.append(
             f"The {environmental_condition} environmental conditions at time of observation "
             "are a known stressor for this species and have been factored into the assessment."
         )
-    if degradation_indicator != "None observed":
-        parts.append(
-            f"Community-reported degradation indicator — {degradation_indicator} — "
-            "aligns with documented threats to Free State medicinal plant populations "
-            "(Vukeya et al., 2024; Ngobeni et al., 2023) and elevates the risk classification."
-        )
-    image_only = [d for d in damage_labels if d in
-                  ("Leaf discolouration", "Browning", "Wilting", "Lesions", "Stem damage")]
-    reported_only = [d for d in damage_labels if d not in image_only]
-    if image_only:
-        parts.append(f"F3 detected from image: {', '.join(image_only)}.")
-    if reported_only:
-        parts.append(
-            f"Additional damage indicators derived from reported context: "
-            f"{', '.join(reported_only)}."
-        )
-    if not image_only and not reported_only:
-        parts.append("F3 detected no visible damage indicators in the submitted image.")
+    if leaf_indicators:
+        parts.append(f"Supporting indicators for this classification: {', '.join(leaf_indicators)}.")
+    else:
+        parts.append("No stress indicators were present in the submitted image.")
     if observer_notes.strip():
         parts.append(
             f"Observer noted: \"{observer_notes[:200]}\". "
-            #"This IK contribution has been recorded in alignment with the ITIKI methodology."
+            "This IK contribution has been recorded in alignment with the study methodology."
         )
     parts.append(
-        f"Overall risk: {risk_level.upper()} (alert score {alert_score}/10). "
-        + ("Researcher notification triggered." if alert_score >= 7
-           else "Continue monitoring per study protocol.")
+        f"Monitoring priority: {risk_level.upper()} (score {alert_score}/10). "
+        "This reflects follow-up urgency for this submission — it does not by itself "
+        "constitute a species-level degradation finding. That determination is made "
+        "separately once a species accumulates repeated Stressed classifications "
+        "(see researcher degradation alerts)."
     )
     comprehensive_report = " ".join(parts)
 
     # ── Recommendations ───────────────────────────────────────────────────────
     recs: list[str] = []
-    if health_status == "Degraded" or alert_score >= 7:
+    if health_status == "Stressed" and alert_score >= 7:
         recs.append(
-            "Escalate to researcher immediately — species meets the ≥3 degraded "
-            "classifications threshold in the monitoring protocol."
+            "Flag for researcher follow-up — high monitoring priority based on combined "
+            "image, environmental, and observer-reported signals."
         )
-    if "Over-harvesting signs" in damage_labels or degradation_indicator == "Over-harvesting":
+    if "Over-harvesting signs reported" in leaf_indicators or degradation_indicator == "Over-harvesting":
         recs.append(
-            "Restrict harvesting at this site. Coordinate with traditional healers "
-            "to identify alternative sources and allow population recovery."
+            "Note possible harvesting pressure at this site. Coordinate with traditional "
+            "healers to assess whether the local population needs a recovery period."
         )
     if environmental_condition in ("Hot", "Dry"):
         recs.append(
@@ -345,37 +349,35 @@ def _build_contextual_result(
         )
     if environmental_condition == "Frost":
         recs.append(
-            "Document frost damage across the monitored population. "
+            "Document frost-related stress across the monitored population. "
             "Check for new growth at root base within 2–3 weeks."
         )
-    if "Lesions" in damage_labels or "Browning" in damage_labels:
+    if "Lesions" in leaf_indicators or "Browning" in leaf_indicators:
         recs.append(
-            "Collect a leaf sample for laboratory analysis to determine whether "
-            "lesions indicate fungal, bacterial, or abiotic stress origin."
+            "Consider a follow-up sample to determine whether lesions indicate "
+            "fungal, bacterial, or abiotic stress origin."
         )
     if trend == "Declining":
         recs.append(
-            "Increase monitoring to bi-weekly submissions for this species "
-            "until trend reverses to Stable or Improving."
+            "Increase monitoring frequency for this species/location until the "
+            "trend returns to Stable or Improving."
         )
     if not recs:
-        recs.append(
-            "Maintain monthly monitoring schedule. No immediate intervention required."
-        )
+        recs.append("Maintain routine monitoring schedule. No immediate follow-up required.")
 
     # ── Prediction note ───────────────────────────────────────────────────────
-    if health_status == "Degraded" and trend == "Declining":
-        note = (f"⚠ Lessertia frutescens has shown a declining trend across "
-                f"{prior_count} prior submission(s). Risk: {risk_level} "
-                f"(alert score {alert_score}/10).")
+    if health_status == "Stressed" and trend == "Declining":
+        note = (f"Leaf shows signs of stress with a declining trend across "
+                f"{prior_count} prior submission(s). Monitoring priority: {risk_level} "
+                f"({alert_score}/10).")
     elif health_status == "Stressed":
-        note = (f"Plant is under stress ({trend} trend). "
-                f"Blended score: {blended:.2f}. Monitor closely.")
+        note = (f"Leaf is under stress ({trend} trend). "
+                f"Blended score: {blended:.2f}. Recommend continued monitoring.")
     elif trend == "Improving":
         note = (f"Positive signal — condition improving "
-                f"(blended score: {blended:.2f}). Status: {health_status}.")
+                f"(blended score: {blended:.2f}). Leaf status: Healthy.")
     else:
-        note = (f"Plant is {health_status} (blended score: {blended:.2f}). "
+        note = (f"Leaf is Healthy (blended score: {blended:.2f}). "
                 f"Trend: {trend}. Based on {prior_count} prior submission(s).")
 
     return dict(
@@ -384,8 +386,8 @@ def _build_contextual_result(
         prior_report_count=prior_count,
         trend_score=round(blended, 4),
         prediction_note=note,
-        damage_labels=damage_labels,
-        damage_detected=len(damage_labels) > 0,
+        damage_labels=leaf_indicators,       # field name kept for compatibility
+        damage_detected=len(leaf_indicators) > 0,
         severity_score=round(severity_score, 4),
         comprehensive_report=comprehensive_report,
         recommendations=recs,
@@ -518,10 +520,7 @@ async def classify_health(
             prior_list = []
     all_scores = prior_list + [current_score]
     prior_count = len(prior_list)
-    health_status = (
-        "Healthy" if current_score < 0.25 else
-        "Stressed" if current_score < 0.60 else "Degraded"
-    )
+    health_status = "Stressed" if current_score >= HEALTH_THRESHOLD else "Healthy"
     if len(all_scores) >= 3:
         slope = all_scores[-1] - all_scores[-3]
         trend = "Improving" if slope < -0.10 else ("Declining" if slope > 0.10 else "Stable")
@@ -546,7 +545,7 @@ async def detect_damage(file: UploadFile = File(...)):
     img_bytes = await file.read()
     img = decode_image(img_bytes)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    labels = _detect_damage_labels(img, hsv)
+    labels = _detect_leaf_indicators(img, hsv)
     return DamageResult(
         damage_labels=labels,
         damage_detected=len(labels) > 0,
@@ -581,10 +580,7 @@ async def full_pipeline(
             prior_list = []
     all_scores = prior_list + [current_score]
     prior_count = len(prior_list)
-    health_status = (
-        "Healthy" if current_score < 0.25 else
-        "Stressed" if current_score < 0.60 else "Degraded"
-    )
+    health_status = "Stressed" if current_score >= HEALTH_THRESHOLD else "Healthy"
     if len(all_scores) >= 3:
         slope = all_scores[-1] - all_scores[-3]
         trend = "Improving" if slope < -0.10 else ("Declining" if slope > 0.10 else "Stable")
@@ -597,7 +593,7 @@ async def full_pipeline(
         if trend == "Improving" else
         f"Plant is {health_status}. Trend: {trend}. Based on {prior_count} prior report(s)."
     )
-    damage_labels = _detect_damage_labels(img, hsv)
+    damage_labels = _detect_leaf_indicators(img, hsv)
     overall = (
         "Species not confirmed — flagged for researcher review." if not identified else
         f"⚠ {species} is Degraded with {len(damage_labels)} damage type(s) detected."

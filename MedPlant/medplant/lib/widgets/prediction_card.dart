@@ -20,8 +20,6 @@ class PredictionCard extends StatelessWidget {
         return const Color(0xFF27AE60);
       case 'Stressed':
         return const Color(0xFFF39C12);
-      case 'Degraded':
-        return const Color(0xFFE74C3C);
       default:
         return AppColors.primary;
     }

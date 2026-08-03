@@ -23,34 +23,34 @@ class InfoNote extends StatelessWidget {
           ),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          InfoRow(
-            icon: Icons.search,
-            text:
-                "ML Function 1 – Species Identification: Random Forest matches the submitted image against the registered Thaba-Nchu medicinal species list and returns a confidence score.",
-          ),
-          SizedBox(height: 10),
-          InfoRow(
-            icon: Icons.health_and_safety,
-            text:
-                "ML Function 2 – Health Classification: Classifies the plant as Healthy, Stressed, or Degraded, then compares results against prior Firebase submissions to produce a trend-based prediction score (Improving / Stable / Declining).",
-          ),
-          SizedBox(height: 10),
-          InfoRow(
-            icon: Icons.bug_report,
-            text:
-                "ML Function 3 – Damage Detection: Identifies specific visible damage indicators — leaf discolouration, wilting, browning, lesions, stem damage. Multiple damage types can be flagged per submission.",
-          ),
-          SizedBox(height: 10),
-          InfoRow(
-            icon: Icons.psychology,
-            text:
-                "IK Integration: Damage detection labels are grounded in Barolong community observational knowledge collected through the Microsoft Forms survey administered to traditional healers in Thaba-Nchu.",
-          ),
-        ],
-      ),
+      // child: Column(
+      //   crossAxisAlignment: CrossAxisAlignment.start,
+      //   children: const [
+      //     InfoRow(
+      //       icon: Icons.search,
+      //       text:
+      //           "ML Function 1 – Species Identification: Random Forest matches the submitted image against the registered Thaba-Nchu medicinal species list and returns a confidence score.",
+      //     ),
+      //     SizedBox(height: 10),
+      //     InfoRow(
+      //       icon: Icons.health_and_safety,
+      //       text:
+      //           "ML Function 2 – Health Classification: Classifies the plant as Healthy, Stressed, or Degraded, then compares results against prior Firebase submissions to produce a trend-based prediction score (Improving / Stable / Declining).",
+      //     ),
+      //     SizedBox(height: 10),
+      //     InfoRow(
+      //       icon: Icons.bug_report,
+      //       text:
+      //           "ML Function 3 – Damage Detection: Identifies specific visible damage indicators — leaf discolouration, wilting, browning, lesions, stem damage. Multiple damage types can be flagged per submission.",
+      //     ),
+      //     SizedBox(height: 10),
+      //     InfoRow(
+      //       icon: Icons.psychology,
+      //       text:
+      //           "IK Integration: Damage detection labels are grounded in Barolong community observational knowledge collected through the Microsoft Forms survey administered to traditional healers in Thaba-Nchu.",
+      //     ),
+      //   ],
+      // ),
     );
   }
 }

@@ -22,7 +22,7 @@ class PlantModel {
   final double? identificationConfidence;
 
   /// ML Function 2 – Trend-based health classification
-  /// Values: 'Healthy' | 'Stressed' | 'Degraded'
+  /// Values: 'Healthy' | 'Stressed' 
   final String? healthStatus;
 
   /// ML Function 2 – Trend direction across prior submissions

@@ -19,7 +19,7 @@ class PredictionModel {
   final double? idConfidence;
 
   // ── ML Function 2: Trend-Based Health Classification ─────────────────────
-  /// Current health: 'Healthy' | 'Stressed' | 'Degraded'
+  /// Current health: 'Healthy' | 'Stressed' 
   final String healthStatus;
 
   /// Trend direction derived from historical Firebase submissions:

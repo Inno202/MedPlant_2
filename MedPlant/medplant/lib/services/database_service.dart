@@ -51,7 +51,7 @@ class DatabaseService {
         'locationArea': 'Thaba-Nchu, Free State',
       });
 
-      if (identified && healthStatus == 'Degraded') {
+      if (identified && healthStatus == 'Stressed') {
         await _checkAndCreateAlert(speciesName);
       }
 
@@ -155,14 +155,9 @@ class DatabaseService {
           .limit(10)
           .get();
 
-      final scores = snapshot.docs
-          .where((d) => isReportVisible(d.data() as Map<String, dynamic>))
-          .map((doc) {
-        final health =
-            (doc.data() as Map<String, dynamic>)['healthStatus'] ?? 'Healthy';
-        if (health == 'Degraded') return '0.8';
-        if (health == 'Stressed') return '0.5';
-        return '0.2';
+      final scores = snapshot.docs.map((doc) {
+        final health = doc['healthStatus'] ?? 'Healthy';
+        return health == 'Stressed' ? '0.6' : '0.2';
       }).toList();
 
       return scores.join(',');
@@ -172,14 +167,14 @@ class DatabaseService {
   }
 
   // ── Degradation alerts ────────────────────────────────────────────────────
-  static Future<void> _checkAndCreateAlert(String speciesName) async {
+static Future<void> _checkAndCreateAlert(String speciesName) async {
     try {
       final snapshot = await _db
           .collection('plant_reports')
           .where('speciesName', isEqualTo: speciesName)
-          .where('healthStatus', isEqualTo: 'Degraded')
+          .where('healthStatus', isEqualTo: 'Stressed')
           .get();
-
+      // ...rest unchanged (count >= 3 logic, alert doc fields, etc.)
       final count = snapshot.docs
           .where((d) => isReportVisible(d.data() as Map<String, dynamic>))
           .length;

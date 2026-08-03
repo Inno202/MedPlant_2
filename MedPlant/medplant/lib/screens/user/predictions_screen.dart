@@ -332,15 +332,10 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
   String get _overallTrend {
     final done = _items.where((i) => i.analysis != null).toList();
     if (done.isEmpty) return 'Calculating…';
-    final degraded =
-        done.where((i) => i.analysis!.healthStatus == 'Degraded').length;
-    final stressed =
-        done.where((i) => i.analysis!.healthStatus == 'Stressed').length;
-    final healthy =
-        done.where((i) => i.analysis!.healthStatus == 'Healthy').length;
-    final declining =
-        done.where((i) => i.analysis!.trendDirection == 'Declining').length;
-    if (degraded >= 3 || declining >= 3) return 'Declining';
+    final stressed = done.where((i) => i.analysis!.healthStatus == 'Stressed').length;
+    final healthy = done.where((i) => i.analysis!.healthStatus == 'Healthy').length;
+    final declining = done.where((i) => i.analysis!.trendDirection == 'Declining').length;
+    if (stressed >= 3 || declining >= 3) return 'Declining';
     if (healthy >= done.length * 0.6) return 'Stable';
     if (stressed > healthy) return 'Declining';
     return 'Stable';
@@ -349,14 +344,9 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
   String get _overallHealth {
     final done = _items.where((i) => i.analysis != null).toList();
     if (done.isEmpty) return '—';
-    final degraded =
-        done.where((i) => i.analysis!.healthStatus == 'Degraded').length;
-    final stressed =
-        done.where((i) => i.analysis!.healthStatus == 'Stressed').length;
-    final healthy =
-        done.where((i) => i.analysis!.healthStatus == 'Healthy').length;
-    if (degraded >= done.length * 0.4) return 'Degraded';
-    if (stressed > healthy) return 'Stressed';
+    final stressed = done.where((i) => i.analysis!.healthStatus == 'Stressed').length;
+    final healthy = done.where((i) => i.analysis!.healthStatus == 'Healthy').length;
+    if (stressed >= done.length * 0.5) return 'Stressed';
     return 'Healthy';
   }
 
@@ -410,8 +400,8 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                 ),
               ],
 
-              const SizedBox(height: 20),
-              const InfoNote(),
+              // const SizedBox(height: 20),
+              // const InfoNote(),
             ],
           ),
         ),

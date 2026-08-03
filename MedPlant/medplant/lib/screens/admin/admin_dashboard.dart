@@ -1042,11 +1042,11 @@ class _ReportsSheet extends StatelessWidget {
                       .first
                   : '—';
               final health = d['healthStatus'] ?? '—';
-              final healthColor = health == 'Degraded'
+              final healthColor = health == 'Stressed'
                   ? const Color(0xFFE74C3C)
-                  : health == 'Stressed'
-                      ? const Color(0xFFF39C12)
-                      : const Color(0xFF27AE60);
+                  : health == 'Healthy'
+                      ? const Color(0xFF27AE60)
+                      : const Color(0xFFF39C12);
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(14),

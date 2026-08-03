@@ -290,7 +290,7 @@ class AppShell extends StatelessWidget {
   String _labelForRoute(String route) {
     if (route.contains('dashboard')) return "Dashboard";
     if (route.contains('viewreports')) return "Reports";
-    if (route.contains('predictions')) return "Predict";
+    if (route.contains('predictions')) return "Monitor";
     if (route.contains('home')) return "Home";
     return "Profile";
   }
