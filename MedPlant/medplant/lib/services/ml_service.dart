@@ -1,5 +1,18 @@
 // lib/services/ml_service.dart
 //
+// FINAL ML ARCHITECTURE (matches ml_server/main.py):
+//   F1 — Species Identification (unchanged)
+//   F2 — Leaf Health: BINARY Healthy / Stressed. Visual evidence
+//        (discolouration, browning, wilting, lesions, stem irregularity)
+//        is only present when health_status == 'Stressed' — it's
+//        supporting detail for F2, not a separate function or class.
+//        `damageLabels` below carries that evidence list — the name is
+//        kept for backward compatibility with existing UI widgets, but it
+//        no longer represents a distinct "damage detection" function.
+//   F3 — Trend & Monitoring: Improving / Stable / Declining, computed
+//        server-side from a linear-regression slope over prior health
+//        scores + the current score.
+//
 // AddReportScreen  → runFullPipelineFromBytes()   (F1+F2+F3, image bytes)
 // PredictionsScreen→ runContextualAnalysisFromUrl() (F2+F3, image URL stored
 //                    in Firestore plant_reports, + all report context fields)
@@ -14,10 +27,17 @@ class FullPipelineResult {
   final String species;
   final double confidence;
   final bool identified;
+
+  /// F2 — 'Healthy' | 'Stressed' only. No 'Degraded' class.
   final String healthStatus;
+
+  /// F3 — 'Improving' | 'Stable' | 'Declining'.
   final String trendDirection;
   final int priorReportCount;
   final String predictionNote;
+
+  /// F2 supporting evidence (discolouration, browning, wilting, lesions,
+  /// stem irregularity) — only populated when [healthStatus] == 'Stressed'.
   final List<String> damageLabels;
   final bool damageDetected;
   final String overallMessage;
@@ -52,17 +72,28 @@ class FullPipelineResult {
 
 // ── F2+F3 contextual result  (PredictionsScreen) ─────────────────────────────
 class ContextualAnalysisResult {
-  final String healthStatus;      // Healthy | Stressed | Degraded
-  final String trendDirection;    // Improving | Stable | Declining
+  /// F2 — 'Healthy' | 'Stressed' only.
+  final String healthStatus;
+
+  /// F3 — 'Improving' | 'Stable' | 'Declining'.
+  final String trendDirection;
   final int priorReportCount;
-  final double trendScore;        // blended 0.0–1.0
+
+  /// F2's raw 0.0 (healthy) .. 1.0 (stressed) score — this is what F3's
+  /// trend slope is computed over.
+  final double trendScore;
   final String predictionNote;
+
+  /// F2 supporting evidence — only populated when [healthStatus] == 'Stressed'.
   final List<String> damageLabels;
   final bool damageDetected;
   final double severityScore;
   final String comprehensiveReport;
   final List<String> recommendations;
   final Map<String, String> factorBreakdown;
+
+  /// Researcher follow-up priority — independent of healthStatus, never
+  /// overrides the F2 Healthy/Stressed call.
   final String riskLevel;         // Low | Moderate | High | Critical
   final int alertScore;           // 0–10
 
@@ -125,6 +156,31 @@ class ContextualAnalysisResult {
       };
 }
 
+// ── F2-only result  (rarely used directly, exposed for completeness) ─────────
+class LeafHealthResult {
+  final String healthStatus;   // 'Healthy' | 'Stressed'
+  final double healthScore;    // 0.0..1.0
+  final double confidence;
+  final String predictionNote;
+  final List<String> evidence; // only populated when Stressed
+
+  const LeafHealthResult({
+    required this.healthStatus,
+    required this.healthScore,
+    required this.confidence,
+    required this.predictionNote,
+    required this.evidence,
+  });
+
+  factory LeafHealthResult.fromJson(Map<String, dynamic> j) => LeafHealthResult(
+        healthStatus: j['health_status'] ?? 'Unknown',
+        healthScore: (j['health_score'] as num?)?.toDouble() ?? 0.0,
+        confidence: (j['confidence'] as num?)?.toDouble() ?? 0.0,
+        predictionNote: j['prediction_note'] ?? '',
+        evidence: List<String>.from(j['evidence'] ?? []),
+      );
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 class MLService {
   // Change to ngrok URL when running on a physical device.
@@ -136,11 +192,15 @@ class MLService {
     Uint8List imageBytes, {
     String fileName = 'image.jpg',
     String priorScores = '',
+    String reportedSeverity = '1',
+    String environmentalCondition = 'Normal',
   }) async {
     try {
-      final uri = Uri.parse(
-          '$_baseUrl/predict/full?prior_scores=${Uri.encodeComponent(priorScores)}');
+      final uri = Uri.parse('$_baseUrl/predict/full');
       final request = http.MultipartRequest('POST', uri);
+      request.fields['prior_scores'] = priorScores;
+      request.fields['reported_severity'] = reportedSeverity;
+      request.fields['environmental_condition'] = environmentalCondition;
       request.files.add(
           http.MultipartFile.fromBytes('file', imageBytes, filename: fileName));
       final streamed = await request.send().timeout(_timeout);
@@ -191,6 +251,33 @@ class MLService {
       return null;
     } catch (e) {
       debugPrint('Contextual URL analysis: $e');
+      return null;
+    }
+  }
+
+  // ── F2 only (rarely called directly — mostly for debugging/testing) ──────
+  static Future<LeafHealthResult?> runLeafHealthFromBytes(
+    Uint8List imageBytes, {
+    String fileName = 'image.jpg',
+    String reportedSeverity = '1',
+    String environmentalCondition = 'Normal',
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/predict/health');
+      final request = http.MultipartRequest('POST', uri);
+      request.fields['reported_severity'] = reportedSeverity;
+      request.fields['environmental_condition'] = environmentalCondition;
+      request.files.add(
+          http.MultipartFile.fromBytes('file', imageBytes, filename: fileName));
+      final streamed = await request.send().timeout(_timeout);
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 200) {
+        return LeafHealthResult.fromJson(
+            jsonDecode(response.body) as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('ML leaf health: $e');
       return null;
     }
   }

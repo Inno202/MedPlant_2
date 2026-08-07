@@ -1,4 +1,9 @@
 // widgets/plant_grid.dart
+// Uses a Wrap (same pattern as InfoGrid) so each card's height is
+// determined by its own content instead of a fixed GridView aspect ratio.
+// This removes the dead space below shorter cards and prevents overflow
+// on cards with longer descriptions.
+
 import 'package:flutter/material.dart';
 import '../models/plant_model.dart';
 import 'plant_card.dart';
@@ -18,28 +23,26 @@ class PlantGrid extends StatelessWidget {
     if (screenWidth >= 900) columns = 3;
     if (screenWidth >= 1200) columns = 4;
 
-    // Calculate childAspectRatio dynamically if needed
-    // Example: keep cards roughly square
-    final crossAxisSpacing = 12.0;
-    final mainAxisSpacing = 12.0;
-    final cardWidth = (screenWidth - ((columns - 1) * crossAxisSpacing)) / columns;
-    final cardHeight = cardWidth * 1; // slight taller for text & image
-    final childAspectRatio = cardWidth / cardHeight;
+    final spacing = 12.0;
+    // Matches the horizontal padding this widget's parent typically applies
+    // (12 on each side, see user_home_screen.dart) — adjust if your
+    // surrounding padding differs.
+    final outerPadding = 24.0;
+    final cardWidth =
+        (screenWidth - outerPadding - (spacing * (columns - 1))) / columns;
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: plants.length,
-      padding: const EdgeInsets.all(4),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        childAspectRatio: childAspectRatio,
-        mainAxisSpacing: mainAxisSpacing,
-        crossAxisSpacing: crossAxisSpacing,
-      ),
-      itemBuilder: (context, index) {
-        return PlantCard(plant: plants[index]);
-      },
+    return Wrap(
+      spacing: spacing,
+      runSpacing: spacing,
+      alignment: WrapAlignment.start,
+      children: plants
+          .map(
+            (plant) => SizedBox(
+              width: cardWidth,
+              child: PlantCard(plant: plant),
+            ),
+          )
+          .toList(),
     );
   }
 }

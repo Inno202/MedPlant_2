@@ -57,37 +57,37 @@ class PlantCard extends StatelessWidget {
           ClipRRect(
             borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.network(
-              plant.imageUrl,
-              width: double.infinity,
-              height: 280,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  height: 280,
-                  color: AppColors.accentBg,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      value: progress.expectedTotalBytes != null
-                          ? progress.cumulativeBytesLoaded /
-                              progress.expectedTotalBytes!
-                          : null,
-                      color: AppColors.primarySoft,
-                    ),
-                  ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 280,
-                color: AppColors.accentBg,
-                child: const Center(
-                  child: Icon(Icons.eco,
-                      size: 48, color: AppColors.primarySoft),
-                ),
-              ),
-            ),
+            // AFTER — image scales with card width instead of being fixed
+child: AspectRatio(
+  aspectRatio: 1.3, // width : height of the image area
+  child: Image.network(
+    plant.imageUrl,
+    width: double.infinity,
+    fit: BoxFit.cover,
+    loadingBuilder: (context, child, progress) {
+      if (progress == null) return child;
+      return Container(
+        color: AppColors.accentBg,
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            value: progress.expectedTotalBytes != null
+                ? progress.cumulativeBytesLoaded /
+                    progress.expectedTotalBytes!
+                : null,
+            color: AppColors.primarySoft,
+          ),
+        ),
+      );
+    },
+    errorBuilder: (context, error, stackTrace) => Container(
+      color: AppColors.accentBg,
+      child: const Center(
+        child: Icon(Icons.eco, size: 48, color: AppColors.primarySoft),
+      ),
+    ),
+  ),
+),
           ),
 
           // ── Body ────────────────────────────────────────────────────

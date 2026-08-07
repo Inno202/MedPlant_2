@@ -1,8 +1,8 @@
 // lib/widgets/prediction_card.dart
-// Displays the combined output of all three Random Forest ML functions:
-//   Function 1 – Species Identification (confidence score)
-//   Function 2 – Trend-Based Health Classification + trend direction
-//   Function 3 – Damage Detection (multi-label)
+// Displays the combined output of the ML pipeline:
+//   F1 – Species Identification (confidence score)
+//   F2 – Leaf Health (BINARY: Healthy / Stressed) + F3 trend direction
+//   F2 supporting evidence (multi-label, only present when Stressed)
 
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
@@ -13,7 +13,7 @@ class PredictionCard extends StatelessWidget {
 
   const PredictionCard({super.key, required this.prediction});
 
-  // ── Colour coding for health status (green / amber / red) ──────────────
+  // ── Colour coding for health status — binary only (green / amber) ──────
   Color _healthColor(String status) {
     switch (status) {
       case 'Healthy':
@@ -111,8 +111,8 @@ class PredictionCard extends StatelessWidget {
 
                   const SizedBox(height: 10),
 
-                  // ── ML Function 1: Species ID confidence ────────────────
-                  _sectionLabel("ML F1 · Species ID"),
+                  // ── F1: Species ID confidence ───────────────────────────
+                  _sectionLabel("F1 · Species ID"),
                   const SizedBox(height: 4),
                   Container(
                     width: double.infinity,
@@ -136,8 +136,8 @@ class PredictionCard extends StatelessWidget {
 
                   const SizedBox(height: 10),
 
-                  // ── ML Function 2: Health Classification + Trend ────────
-                  _sectionLabel("ML F2 · Health & Trend"),
+                  // ── F2 (binary health) + F3 (trend) ─────────────────────
+                  _sectionLabel("F2 · Leaf Health  ·  F3 · Trend"),
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -184,12 +184,12 @@ class PredictionCard extends StatelessWidget {
 
                   const SizedBox(height: 10),
 
-                  // ── ML Function 3: Damage Detection ─────────────────────
-                  _sectionLabel("ML F3 · Damage Detected"),
+                  // ── F2 supporting evidence (only when Stressed) ─────────
+                  _sectionLabel("F2 · Supporting Evidence"),
                   const SizedBox(height: 4),
                   if (prediction.damageLabels.isEmpty)
                     const Text(
-                      "No visible damage detected",
+                      "No stress evidence detected",
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                     )
                   else
@@ -251,15 +251,15 @@ class PredictionCard extends StatelessWidget {
   Widget _damageChip(String label) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-          color: const Color(0xFFFDECEC),
+          color: const Color(0xFFFFF3E0),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE74C3C).withOpacity(0.3)),
+          border: Border.all(color: const Color(0xFFF39C12).withOpacity(0.4)),
         ),
         child: Text(
           label,
           style: const TextStyle(
             fontSize: 10,
-            color: Color(0xFFE74C3C),
+            color: Color(0xFFB8720A),
             fontWeight: FontWeight.w600,
           ),
         ),

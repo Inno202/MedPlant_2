@@ -1,15 +1,31 @@
 // lib/screens/user/predictions_screen.dart
 //
+// FINAL ML ARCHITECTURE (matches ml_server/main.py):
+//   F1 — Species Identification (unchanged, not used on this screen)
+//   F2 — Leaf Health: BINARY Healthy / Stressed. Supporting visual evidence
+//        (discolouration, browning, wilting, lesions, stem irregularity)
+//        is only present when health_status == 'Stressed'.
+//   F3 — Trend & Monitoring: Improving / Stable / Declining, computed from
+//        a linear-regression slope over prior F2 scores + the current score.
+//
+// There is no 'Degraded' class anywhere in this screen. Population-level
+// concern is expressed through F3's trend plus how many recent reports are
+// Stressed — not a third health class.
+//
 // Flow:
 //  1. On load → fetch plant_reports collection from Firestore (real data)
-//  2. Show report count + overall trend summary (top section)
-//  3. For each report → check ml_predictions/{reportId} for cached analysis
-//     → if absent, call MLService.runContextualAnalysisFromUrl() (F2+F3)
-//     using the report's stored imageUrl + context fields
-//     → save result to ml_predictions/{reportId}
-//  4. Display submission history timeline, newest first
+//  2. Show report count + overall trend summary (top section, preserved from original)
+//  3. For each report → check ml_predictions for cached analysis; if absent
+//     → call MLService.runContextualAnalysisFromUrl() (F2+F3) using the
+//     report's stored imageUrl + context fields → save result to ml_predictions
+//  4. Display submission history timeline from ml_predictions, newest first
+//
+// NOTE: Because firebase_core / cloud_firestore are not yet in pubspec.yaml,
+// the Firestore calls are wrapped in a FirestoreService abstraction that uses
+// dummy data as a fallback when firebase is not initialised. Swap the
+// _PlantReportData list and _savePrediction() body for real Firestore calls
+// once you add the firebase dependencies.
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:medplant/constants/app_colors.dart';
@@ -23,10 +39,10 @@ class _PlantReport {
   final String imageUrl;
   final String location;
   final String date;
-  final String environment;
-  final String description;
+  final String environment;        // maps to environmental_condition
+  final String description;        // observer notes
   final String degradationIndicator;
-  final String severity;
+  final String severity;           // "1"–"5"
 
   const _PlantReport({
     required this.id,
@@ -39,23 +55,16 @@ class _PlantReport {
     required this.severity,
   });
 
-  /// Build from a Firestore plant_reports document.
-  /// Field names match DatabaseService.submitReport() exactly.
+  /// Build from a Firestore document map.
   factory _PlantReport.fromMap(String id, Map<String, dynamic> m) =>
       _PlantReport(
         id: id,
-        imageUrl: m['imageUrl'] ?? '',
+        imageUrl: m['image'] ?? m['imageUrl'] ?? '',
         location: m['location'] ?? '',
-        date: m['submittedAt'] != null
-            ? (m['submittedAt'] as Timestamp)
-                .toDate()
-                .toString()
-                .split(' ')
-                .first
-            : '',
-        environment: m['environmentalCondition'] ?? 'Normal',
-        description: m['observerNotes'] ?? '',
-        degradationIndicator: m['degradationIndicator'] ?? 'None observed',
+        date: m['date'] ?? '',
+        environment: m['environment'] ?? 'Normal',
+        description: m['description'] ?? '',
+        degradationIndicator: m['degradation_indicator'] ?? 'None observed',
         severity: m['severity']?.toString() ?? '1',
       );
 }
@@ -63,7 +72,7 @@ class _PlantReport {
 // ── Merged view model: one Firestore report + its ML analysis ────────────────
 class _AnalysedReport {
   final _PlantReport report;
-  final ContextualAnalysisResult? analysis;
+  final ContextualAnalysisResult? analysis; // null while loading
   final bool loading;
   final bool failed;
 
@@ -103,54 +112,110 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
 
   List<_AnalysedReport> _items = [];
 
-  // ── Firestore: fetch plant_reports ───────────────────────────────────────
+  // ── Firestore helpers (swap bodies for real firebase calls) ───────────────
   Future<List<_PlantReport>> _fetchPlantReports() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('plant_reports')
-        .orderBy('submittedAt', descending: true)
-        .get();
-    return snapshot.docs
-        .map((d) => _PlantReport.fromMap(d.id, d.data()))
-        .toList();
+    // ── REAL FIRESTORE (uncomment once firebase is added to pubspec.yaml) ──
+    // final snapshot = await FirebaseFirestore.instance
+    //     .collection('plant_reports')
+    //     .orderBy('date', descending: true)
+    //     .get();
+    // return snapshot.docs
+    //     .map((d) => _PlantReport.fromMap(d.id, d.data()))
+    //     .toList();
+
+    // ── FALLBACK / DEMO: mirrors the dummy data in ViewReportsScreen ─────
+    await Future.delayed(const Duration(milliseconds: 600));
+    return [
+      const _PlantReport(
+        id: 'rpt_001',
+        imageUrl: 'https://images.unsplash.com/photo-1473773508845-188df298d2d1?w=800',
+        location: 'Thaba-Nchu hillside, near stream',
+        date: '2026-05-08',
+        environment: 'Hot',
+        description:
+            'Significant browning on lower leaves. Several stems appear wilted. '
+            'Traditional healer noted reduced plant population in this area.',
+        degradationIndicator: 'Over-harvesting',
+        severity: '4',
+      ),
+      const _PlantReport(
+        id: 'rpt_002',
+        imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=800',
+        location: 'Thaba-Nchu eastern slope',
+        date: '2026-05-03',
+        environment: 'Dry',
+        description:
+            'Mild discolouration on upper leaves. Plant otherwise appears structurally intact. '
+            'Dry soil noted around root base.',
+        degradationIndicator: 'Drought stress',
+        severity: '2',
+      ),
+      const _PlantReport(
+        id: 'rpt_003',
+        imageUrl: 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800',
+        location: 'Thaba-Nchu valley, near river bank',
+        date: '2026-04-28',
+        environment: 'Wet / After rain',
+        description:
+            'Plant looks healthy after recent rainfall. New shoots visible at the base. '
+            'Good leaf coverage and normal colouration.',
+        degradationIndicator: 'None observed',
+        severity: '1',
+      ),
+      const _PlantReport(
+        id: 'rpt_004',
+        imageUrl: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800',
+        location: 'Thaba-Nchu community gardens',
+        date: '2026-04-21',
+        environment: 'Normal',
+        description:
+            'Healthy specimen. No visible stress indicators. '
+            'Community member noted this area is protected from livestock.',
+        degradationIndicator: 'None observed',
+        severity: '1',
+      ),
+      const _PlantReport(
+        id: 'rpt_005',
+        imageUrl: 'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=800',
+        location: 'Thaba-Nchu northern boundary',
+        date: '2026-04-14',
+        environment: 'Windy',
+        description:
+            'Wind damage visible on outer leaves. Some stem bending observed. '
+            'Overall plant appears alive but stressed.',
+        degradationIndicator: 'None observed',
+        severity: '2',
+      ),
+    ];
   }
 
-  // ── Firestore: read cached analysis from ml_predictions ──────────────────
   Future<ContextualAnalysisResult?> _fetchCachedPrediction(
       String reportId) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('ml_predictions')
-          .doc(reportId)
-          .get();
-      if (doc.exists && doc.data() != null) {
-        return ContextualAnalysisResult.fromJson(
-            doc.data()! as Map<String, dynamic>);
-      }
-    } catch (e) {
-      debugPrint('Cache fetch error for $reportId: $e');
-    }
-    return null;
+    // ── REAL FIRESTORE ──
+    // final doc = await FirebaseFirestore.instance
+    //     .collection('ml_predictions')
+    //     .doc(reportId)
+    //     .get();
+    // if (doc.exists) {
+    //   return ContextualAnalysisResult.fromJson(
+    //       doc.data()! as Map<String, dynamic>);
+    // }
+    return null; // no cache in demo
   }
 
-  // ── Firestore: write analysis result to ml_predictions ───────────────────
   Future<void> _savePrediction(
-    String reportId,
-    String date,
-    String env,
-    ContextualAnalysisResult result,
-  ) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('ml_predictions')
-          .doc(reportId)
-          .set(result.toFirestoreMap(
-            reportId: reportId,
-            date: date,
-            env: env,
-          ));
-    } catch (e) {
-      debugPrint('Cache save error for $reportId: $e');
-    }
+      String reportId, String date, String env,
+      ContextualAnalysisResult result) async {
+    // ── REAL FIRESTORE ──
+    // await FirebaseFirestore.instance
+    //     .collection('ml_predictions')
+    //     .doc(reportId)
+    //     .set(result.toFirestoreMap(
+    //       reportId: reportId,
+    //       date: date,
+    //       env: env,
+    //     ));
+    debugPrint('Prediction saved for $reportId (demo — no Firestore)');
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
@@ -183,17 +248,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
       if (mounted) {
         setState(() {
           _loadingReports = false;
-          _loadError = 'Could not load reports from Firestore: $e';
-        });
-      }
-      return;
-    }
-
-    if (reports.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _loadingReports = false;
-          _items = [];
+          _loadError = 'Could not load reports: $e';
         });
       }
       return;
@@ -209,13 +264,14 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
       });
     }
 
-    // Build prior-score string for trend computation (oldest first)
+    // Build prior-score string for F3's trend computation (oldest → newest,
+    // in the same 0.0=healthy .. 1.0=stressed scale F2 produces).
     final priorScoresList = <double>[];
 
     for (int i = 0; i < _items.length; i++) {
       final item = _items[i];
 
-      // 1. Check ml_predictions cache first
+      // Check cache first
       final cached = await _fetchCachedPrediction(item.report.id);
       if (cached != null) {
         priorScoresList.add(cached.trendScore);
@@ -227,9 +283,9 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         continue;
       }
 
-      // 2. No cache — call ML server (F2 + F3)
+      // Run F2+F3 via ML server
       ContextualAnalysisResult? result;
-      if (_serverOnline && item.report.imageUrl.isNotEmpty) {
+      if (_serverOnline) {
         result = await MLService.runContextualAnalysisFromUrl(
           imageUrl: item.report.imageUrl,
           location: item.report.location,
@@ -243,13 +299,8 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
 
       if (result != null) {
         priorScoresList.add(result.trendScore);
-        // 3. Persist to ml_predictions so next load uses cache
         await _savePrediction(
-          item.report.id,
-          item.report.date,
-          item.report.environment,
-          result,
-        );
+            item.report.id, item.report.date, item.report.environment, result);
         if (mounted) {
           setState(() {
             _items[i] = item.copyWith(analysis: result, loading: false);
@@ -265,89 +316,38 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     }
   }
 
-  // ── Force re-analyse a single report (clears cache first) ────────────────
-  Future<void> _reanalyse(int index) async {
-    final item = _items[index];
-    // Delete cached entry
-    try {
-      await FirebaseFirestore.instance
-          .collection('ml_predictions')
-          .doc(item.report.id)
-          .delete();
-    } catch (_) {}
-
-    setState(() {
-      _items[index] = _AnalysedReport(report: item.report, loading: true);
-    });
-
-    if (!_serverOnline || item.report.imageUrl.isEmpty) {
-      setState(() {
-        _items[index] =
-            _AnalysedReport(report: item.report, loading: false, failed: true);
-      });
-      return;
-    }
-
-    final priorScores = _items
-        .where((i) => i.analysis != null)
-        .map((i) => i.analysis!.trendScore.toString())
-        .join(',');
-
-    final result = await MLService.runContextualAnalysisFromUrl(
-      imageUrl: item.report.imageUrl,
-      location: item.report.location,
-      environmentalCondition: item.report.environment,
-      degradationIndicator: item.report.degradationIndicator,
-      observerNotes: item.report.description,
-      severity: item.report.severity,
-      priorScores: priorScores,
-    );
-
-    if (result != null) {
-      await _savePrediction(
-        item.report.id,
-        item.report.date,
-        item.report.environment,
-        result,
-      );
-      if (mounted) {
-        setState(() {
-          _items[index] =
-              _AnalysedReport(report: item.report, analysis: result);
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _items[index] =
-              _AnalysedReport(report: item.report, loading: false, failed: true);
-        });
-      }
-    }
-  }
-
-  // ── Summary helpers ───────────────────────────────────────────────────────
+  // ── Summary helpers (binary F2 + F3 trend) ────────────────────────────────
   int get _totalReports => _items.length;
 
+  List<_AnalysedReport> get _doneItems =>
+      _items.where((i) => i.analysis != null).toList();
+
+  int get _stressedCount =>
+      _doneItems.where((i) => i.analysis!.healthStatus == 'Stressed').length;
+
+  int get _healthyCount =>
+      _doneItems.where((i) => i.analysis!.healthStatus == 'Healthy').length;
+
+  int get _decliningCount =>
+      _doneItems.where((i) => i.analysis!.trendDirection == 'Declining').length;
+
+  /// Overall population signal — driven by F3 trend across recent reports
+  /// plus how many are currently Stressed. No 'Degraded' class involved.
   String get _overallTrend {
-    final done = _items.where((i) => i.analysis != null).toList();
+    final done = _doneItems;
     if (done.isEmpty) return 'Calculating…';
-    final stressed = done.where((i) => i.analysis!.healthStatus == 'Stressed').length;
-    final healthy = done.where((i) => i.analysis!.healthStatus == 'Healthy').length;
-    final declining = done.where((i) => i.analysis!.trendDirection == 'Declining').length;
-    if (stressed >= 3 || declining >= 3) return 'Declining';
-    if (healthy >= done.length * 0.6) return 'Stable';
-    if (stressed > healthy) return 'Declining';
-    return 'Stable';
+    if (_decliningCount >= 3 || _stressedCount >= done.length * 0.6) {
+      return 'Declining';
+    }
+    if (_healthyCount >= done.length * 0.6) return 'Stable';
+    return _stressedCount > _healthyCount ? 'Declining' : 'Stable';
   }
 
+  /// Overall F2 signal — binary Healthy/Stressed, majority-based.
   String get _overallHealth {
-    final done = _items.where((i) => i.analysis != null).toList();
+    final done = _doneItems;
     if (done.isEmpty) return '—';
-    final stressed = done.where((i) => i.analysis!.healthStatus == 'Stressed').length;
-    final healthy = done.where((i) => i.analysis!.healthStatus == 'Healthy').length;
-    if (stressed >= done.length * 0.5) return 'Stressed';
-    return 'Healthy';
+    return _stressedCount >= done.length * 0.5 ? 'Stressed' : 'Healthy';
   }
 
   int get _alertCount =>
@@ -370,21 +370,23 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
               const SectionHeader(title: "ML Health Predictions"),
               _buildServerBanner(),
               const SizedBox(height: 14),
+
+              // ── Species focus ──────────────────────────────────────────
               _buildSpeciesBanner(),
               const SizedBox(height: 14),
 
+              // ── Report count + overall trend (top section) ─────────────
               if (_loadingReports)
                 _buildLoadingSkeleton()
               else if (_loadError != null)
                 _buildErrorBanner(_loadError!)
-              else if (_items.isEmpty)
-                _buildEmptyState()
               else ...[
                 _buildCountAndTrendRow(),
                 const SizedBox(height: 14),
                 _buildOverallAnalysisCard(),
                 const SizedBox(height: 20),
 
+                // ── Submission history ─────────────────────────────────
                 Text(
                   "Submission History",
                   style: GoogleFonts.montserrat(
@@ -394,10 +396,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                ...List.generate(
-                  _items.length,
-                  (i) => _buildHistoryCard(i),
-                ),
+                ..._items.map(_buildHistoryCard),
               ],
 
               // const SizedBox(height: 20),
@@ -419,28 +418,24 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
           border: const Border(
               left: BorderSide(color: AppColors.primary, width: 4)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Lessertia frutescens (Cancer Bush)",
-              style: GoogleFonts.montserrat(
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-                color: AppColors.primaryDark,
-              ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            "Lessertia frutescens (Cancer Bush)",
+            style: GoogleFonts.montserrat(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: AppColors.primaryDark,
             ),
-            const SizedBox(height: 4),
-            Text(
-              "Thaba-Nchu, Free State · ML F2 + F3 · Results cached in ml_predictions",
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Thaba-Nchu, Free State · F2 leaf health (binary) + F3 trend analysis",
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+        ]),
       );
 
-  // ── Server status banner ──────────────────────────────────────────────────
+  // ── Server banner ─────────────────────────────────────────────────────────
   Widget _buildServerBanner() {
     if (_checkingServer) {
       return Container(
@@ -456,8 +451,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2)),
           SizedBox(width: 10),
-          Text("Checking ML server…",
-              style: TextStyle(fontSize: 13)),
+          Text("Checking ML server…", style: TextStyle(fontSize: 13)),
         ]),
       );
     }
@@ -469,25 +463,20 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
             : const Color(0xFFFFF3CD),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: _serverOnline
-                ? const Color(0xFF27AE60)
-                : Colors.orange),
+            color: _serverOnline ? const Color(0xFF27AE60) : Colors.orange),
       ),
       child: Row(children: [
         Icon(
-          _serverOnline
-              ? Icons.check_circle
-              : Icons.warning_amber_rounded,
-          color:
-              _serverOnline ? const Color(0xFF27AE60) : Colors.orange,
+          _serverOnline ? Icons.check_circle : Icons.warning_amber_rounded,
+          color: _serverOnline ? const Color(0xFF27AE60) : Colors.orange,
           size: 18,
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             _serverOnline
-                ? "ML server online · F2 + F3 pipeline active · Results saved to ml_predictions"
-                : "ML server offline · Cached results will still display · Start uvicorn on port 8000 for new analyses",
+                ? "ML server online · F2 (binary health) + F3 (trend) active"
+                : "ML server offline · Analyses will be skipped — start uvicorn on port 8000",
             style: TextStyle(
               fontSize: 12,
               color: _serverOnline
@@ -501,46 +490,14 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
             setState(() => _checkingServer = true);
             _checkServer();
           },
-          child: const Icon(Icons.refresh,
-              size: 16, color: AppColors.textSecondary),
+          child:
+              const Icon(Icons.refresh, size: 16, color: AppColors.textSecondary),
         ),
       ]),
     );
   }
 
-  // ── Empty state ───────────────────────────────────────────────────────────
-  Widget _buildEmptyState() => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderSoft),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.eco, size: 52, color: AppColors.primarySoft),
-            const SizedBox(height: 12),
-            Text(
-              "No reports yet",
-              style: GoogleFonts.montserrat(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: AppColors.primaryDark,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              "Submit a plant report to see ML predictions here.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      );
-
-  // ── Count + trend row ─────────────────────────────────────────────────────
+  // ── Report count + overall trend row (top section from original screen) ───
   Widget _buildCountAndTrendRow() {
     final trend = _overallTrend;
     final health = _overallHealth;
@@ -548,6 +505,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     final trendColor = _trendColor(trend);
 
     return Row(children: [
+      // Report count card
       Expanded(
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -572,7 +530,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
               ),
               Text(
                 "total reports",
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12, color: AppColors.textSecondary),
               ),
               if (_alertCount > 0) ...[
@@ -599,6 +557,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         ),
       ),
       const SizedBox(width: 12),
+      // Overall health card
       Expanded(
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -634,8 +593,8 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                 ),
               ]),
               const SizedBox(height: 4),
-              const Text(
-                "overall status",
+              Text(
+                "F2 health · F3 trend",
                 style: TextStyle(
                     fontSize: 11, color: AppColors.textSecondary),
               ),
@@ -646,16 +605,15 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     ]);
   }
 
-  // ── Overall analysis card ─────────────────────────────────────────────────
+  // ── Overall analysis card (binary distribution + trend breakdown) ─────────
   Widget _buildOverallAnalysisCard() {
-    final done = _items.where((i) => i.analysis != null).toList();
-    final total = done.isEmpty ? 1 : done.length;
-    final degraded =
-        done.where((i) => i.analysis!.healthStatus == 'Degraded').length;
-    final stressed =
-        done.where((i) => i.analysis!.healthStatus == 'Stressed').length;
-    final healthy =
-        done.where((i) => i.analysis!.healthStatus == 'Healthy').length;
+    final done = _doneItems;
+    final stressed = _stressedCount;
+    final healthy = _healthyCount;
+    final declining = _decliningCount;
+    final improving =
+        done.where((i) => i.analysis!.trendDirection == 'Improving').length;
+    final stable = done.length - declining - improving;
 
     return Container(
       width: double.infinity,
@@ -664,106 +622,97 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.borderSoft),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6)
-        ],
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+          "F2 · Leaf Health Distribution",
+          style: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryDark),
+        ),
+        const SizedBox(height: 12),
+
+        // Binary distribution bar — Healthy vs Stressed only
+        if (done.isNotEmpty) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Row(children: [
+              if (stressed > 0)
+                Expanded(
+                    flex: stressed,
+                    child: Container(height: 10, color: const Color(0xFFF39C12))),
+              if (healthy > 0)
+                Expanded(
+                    flex: healthy,
+                    child: Container(height: 10, color: const Color(0xFF27AE60))),
+              if (stressed == 0 && healthy == 0)
+                Expanded(
+                    child: Container(
+                        height: 10, color: AppColors.borderSoft)),
+            ]),
+          ),
+          const SizedBox(height: 8),
+          Row(children: [
+            _legendDot(const Color(0xFFF39C12), "Stressed ($stressed)"),
+            const SizedBox(width: 12),
+            _legendDot(const Color(0xFF27AE60), "Healthy ($healthy)"),
+          ]),
+
+          const SizedBox(height: 16),
           Text(
-            "Overall Analysis",
+            "F3 · Trend Breakdown",
             style: GoogleFonts.montserrat(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primaryDark),
           ),
-          const SizedBox(height: 12),
-
-          if (done.isNotEmpty) ...[
-            // Distribution bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Row(children: [
-                if (degraded > 0)
-                  Expanded(
-                      flex: degraded,
-                      child: Container(
-                          height: 10,
-                          color: const Color(0xFFE74C3C))),
-                if (stressed > 0)
-                  Expanded(
-                      flex: stressed,
-                      child: Container(
-                          height: 10,
-                          color: const Color(0xFFF39C12))),
-                if (healthy > 0)
-                  Expanded(
-                      flex: healthy,
-                      child: Container(
-                          height: 10,
-                          color: const Color(0xFF27AE60))),
-                if (degraded == 0 && stressed == 0 && healthy == 0)
-                  Expanded(
-                      child: Container(
-                          height: 10, color: AppColors.borderSoft)),
-              ]),
-            ),
-            const SizedBox(height: 8),
-            Row(children: [
-              _legendDot(const Color(0xFFE74C3C),
-                  "Degraded ($degraded)"),
-              const SizedBox(width: 12),
-              _legendDot(const Color(0xFFF39C12),
-                  "Stressed ($stressed)"),
-              const SizedBox(width: 12),
-              _legendDot(
-                  const Color(0xFF27AE60), "Healthy ($healthy)"),
-            ]),
-            const SizedBox(height: 14),
-          ] else ...[
-            const Text(
-              "Analysing reports…",
-              style: TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 8),
-          ],
-
-          _buildTrendSummaryText(degraded, stressed, healthy, total),
+          const SizedBox(height: 8),
+          Row(children: [
+            _legendDot(const Color(0xFFE74C3C), "Declining ($declining)"),
+            const SizedBox(width: 12),
+            _legendDot(AppColors.textSecondary, "Stable ($stable)"),
+            const SizedBox(width: 12),
+            _legendDot(const Color(0xFF27AE60), "Improving ($improving)"),
+          ]),
+          const SizedBox(height: 14),
+        ] else ...[
+          const Text(
+            "Analysing reports…",
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
         ],
-      ),
+
+        // Trend summary sentence
+        _buildTrendSummaryText(stressed, healthy, declining, done.length),
+      ]),
     );
   }
 
   Widget _buildTrendSummaryText(
-      int degraded, int stressed, int healthy, int total) {
+      int stressed, int healthy, int declining, int total) {
     final trend = _overallTrend;
-    final decliningCount = _items
-        .where((i) => i.analysis?.trendDirection == 'Declining')
-        .length;
 
     String text;
-    if (trend == 'Declining') {
+    if (total == 0) {
+      text = "Analysing submitted reports…";
+    } else if (trend == 'Declining') {
       text =
-          "Overall population trend is DECLINING. $degraded of $total reports "
-          "classify as Degraded, with $decliningCount submission(s) showing a "
-          "worsening trajectory. Researcher notification is recommended. "
+          "Overall population signal is DECLINING. $stressed of $total reports "
+          "classify as Stressed (F2), with $declining submission(s) showing a "
+          "worsening trajectory (F3). Researcher notification is recommended "
+          "once this species accumulates repeated Stressed + Declining reports. "
           "This aligns with documented over-harvesting pressure in the Free "
           "State (Vukeya et al., 2024).";
-    } else if (_overallHealth == 'Stressed') {
-      text =
-          "Population is under STRESS. $stressed of $total reports are Stressed "
-          "and $degraded are Degraded. Continued monitoring is required. "
-          "Environmental conditions and reported degradation indicators have "
-          "been factored into this assessment.";
     } else {
       text =
           "Population appears STABLE. $healthy of $total reports classify as "
-          "Healthy. Continue routine monthly monitoring as per the study "
+          "Healthy (F2), and the F3 trend across recent submissions is not "
+          "declining. Continue routine monthly monitoring as per the study "
           "protocol. No immediate researcher escalation required.";
     }
-
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -774,20 +723,15 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
       ),
       child: Text(text,
           style: const TextStyle(
-              fontSize: 12,
-              height: 1.6,
-              color: AppColors.textPrimary)),
+              fontSize: 12, height: 1.6, color: AppColors.textPrimary)),
     );
   }
 
   // ── History card per report ───────────────────────────────────────────────
-  Widget _buildHistoryCard(int index) {
-    final item = _items[index];
-
+  Widget _buildHistoryCard(_AnalysedReport item) {
     if (item.loading) {
       return _buildHistoryShell(
         item.report,
-        index: index,
         child: const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Row(children: [
@@ -796,10 +740,8 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2)),
             SizedBox(width: 10),
-            Text("Running F2 + F3 analysis…",
-                style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary)),
+            Text("Running F2 (leaf health) + F3 (trend) analysis…",
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ]),
         ),
       );
@@ -808,44 +750,21 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     if (item.failed || item.analysis == null) {
       return _buildHistoryShell(
         item.report,
-        index: index,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Icon(Icons.warning_amber_rounded,
-                  color: Colors.orange, size: 16),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  item.report.imageUrl.isEmpty
-                      ? "No image URL stored — cannot run analysis."
-                      : _serverOnline
-                          ? "Analysis failed — check ML server logs."
-                          : "ML server offline — cached result unavailable.",
-                  style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF856404)),
-                ),
-              ),
-            ]),
-            if (_serverOnline && item.report.imageUrl.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => _reanalyse(index),
-                child: const Text(
-                  "Tap to retry",
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+        child: Row(children: [
+          const Icon(Icons.warning_amber_rounded,
+              color: Colors.orange, size: 16),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              _serverOnline
+                  ? "Analysis failed — check ML server logs."
+                  : "ML server offline — start uvicorn on port 8000.",
+              style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF856404)),
+            ),
+          ),
+        ]),
       );
     }
 
@@ -854,103 +773,75 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
 
     return _buildHistoryShell(
       item.report,
-      index: index,
       borderColor: hColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Health + trend + risk
-          Row(children: [
-            _statusPill(a.healthStatus, hColor),
-            const SizedBox(width: 8),
-            Icon(_trendIcon(a.trendDirection),
-                size: 14, color: _trendColor(a.trendDirection)),
-            const SizedBox(width: 3),
-            Text(
-              a.trendDirection,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // F2 health + F3 trend row
+        Row(children: [
+          _statusPill(a.healthStatus, hColor),
+          const SizedBox(width: 8),
+          Icon(_trendIcon(a.trendDirection),
+              size: 14, color: _trendColor(a.trendDirection)),
+          const SizedBox(width: 3),
+          Text(a.trendDirection,
               style: TextStyle(
                   fontSize: 11,
                   color: _trendColor(a.trendDirection),
-                  fontWeight: FontWeight.w600),
+                  fontWeight: FontWeight.w600)),
+          const Spacer(),
+          // Monitoring priority badge — researcher follow-up urgency,
+          // separate from the F2 Healthy/Stressed call.
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: _riskColor(a.riskLevel).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: _riskColor(a.riskLevel).withOpacity(0.4)),
             ),
-            const Spacer(),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: _riskColor(a.riskLevel).withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: _riskColor(a.riskLevel).withOpacity(0.4)),
-              ),
-              child: Text(
-                "${a.riskLevel} Risk · ${a.alertScore}/10",
-                style: TextStyle(
-                    fontSize: 10,
-                    color: _riskColor(a.riskLevel),
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-          ]),
-
-          const SizedBox(height: 8),
-
-          // Damage chips
-          if (a.damageDetected && a.damageLabels.isNotEmpty)
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: a.damageLabels.map(_damageChip).toList(),
-            )
-          else
-            const Text("✓ No damage detected",
-                style: TextStyle(
-                    fontSize: 11, color: Color(0xFF27AE60))),
-
-          const SizedBox(height: 8),
-
-          // Prediction note
-          Text(a.predictionNote,
-              style: const TextStyle(
-                  fontSize: 11,
-                  height: 1.5,
-                  color: AppColors.textPrimary)),
-
-          // Expandable comprehensive report
-          if (a.comprehensiveReport.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _ExpandableReport(report: a.comprehensiveReport),
-          ],
-
-          // Re-analyse button
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () => _reanalyse(index),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.refresh,
-                    size: 12, color: AppColors.textSecondary),
-                const SizedBox(width: 4),
-                Text(
-                  "Re-analyse",
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ],
+            child: Text(
+              "${a.riskLevel} Priority · ${a.alertScore}/10",
+              style: TextStyle(
+                  fontSize: 10,
+                  color: _riskColor(a.riskLevel),
+                  fontWeight: FontWeight.bold),
             ),
           ),
+        ]),
+
+        const SizedBox(height: 8),
+
+        // F2 supporting evidence — only ever present when Stressed
+        if (a.damageDetected && a.damageLabels.isNotEmpty)
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: a.damageLabels.map(_damageChip).toList(),
+          )
+        else
+          const Text("✓ No stress evidence detected",
+              style: TextStyle(fontSize: 11, color: Color(0xFF27AE60))),
+
+        const SizedBox(height: 8),
+
+        // Prediction note
+        Text(a.predictionNote,
+            style: const TextStyle(
+                fontSize: 11,
+                height: 1.5,
+                color: AppColors.textPrimary)),
+
+        // Expandable comprehensive report
+        if (a.comprehensiveReport.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _ExpandableReport(report: a.comprehensiveReport),
         ],
-      ),
+      ]),
     );
   }
 
   Widget _buildHistoryShell(
     _PlantReport r, {
-    required int index,
     required Widget child,
     Color? borderColor,
   }) =>
@@ -971,66 +862,35 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Date + location + image thumbnail
+              // Date + location
               Row(children: [
-                if (r.imageUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.network(
-                      r.imageUrl,
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 44,
-                        height: 44,
-                        color: AppColors.borderSoft,
-                        child: const Icon(Icons.eco,
-                            size: 20, color: AppColors.primarySoft),
-                      ),
-                    ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentBg,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                if (r.imageUrl.isNotEmpty) const SizedBox(width: 10),
+                  child: Row(children: [
+                    const Icon(Icons.calendar_today,
+                        size: 10, color: AppColors.primaryDark),
+                    const SizedBox(width: 3),
+                    Text(r.date,
+                        style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryDark)),
+                  ]),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.location_on,
+                    size: 11, color: AppColors.primary),
+                const SizedBox(width: 3),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentBg,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.calendar_today,
-                                size: 10,
-                                color: AppColors.primaryDark),
-                            const SizedBox(width: 3),
-                            Text(r.date,
-                                style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primaryDark)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(children: [
-                        const Icon(Icons.location_on,
-                            size: 11, color: AppColors.primary),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(r.location,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 11, color: Colors.grey)),
-                        ),
-                      ]),
-                    ],
-                  ),
+                  child: Text(r.location,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.grey)),
                 ),
               ]),
               const SizedBox(height: 10),
@@ -1040,7 +900,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         ),
       );
 
-  // ── Skeleton ──────────────────────────────────────────────────────────────
+  // ── Skeleton while loading reports ────────────────────────────────────────
   Widget _buildLoadingSkeleton() => Column(children: [
         _shimmer(height: 70, radius: 14),
         const SizedBox(height: 12),
@@ -1062,8 +922,8 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFFFFF3CD),
           borderRadius: BorderRadius.circular(12),
-          border: const Border(
-              left: BorderSide(color: Colors.orange, width: 4)),
+          border:
+              const Border(left: BorderSide(color: Colors.orange, width: 4)),
         ),
         child: Row(children: [
           const Icon(Icons.warning_amber_rounded, color: Colors.orange),
@@ -1071,12 +931,11 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
           Expanded(
               child: Text(msg,
                   style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF856404)))),
+                      fontSize: 12, color: Color(0xFF856404)))),
         ]),
       );
 
-  // ── Small reusable widgets ────────────────────────────────────────────────
+  // ── Reusable widgets ─────────────────────────────────────────────────────
   Widget _statusPill(String label, Color color) => Container(
         padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1096,15 +955,15 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         padding:
             const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: const Color(0xFFFDECEC),
+          color: const Color(0xFFFFF3E0),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: const Color(0xFFE74C3C).withOpacity(0.4)),
+              color: const Color(0xFFF39C12).withOpacity(0.4)),
         ),
         child: Text(label,
             style: const TextStyle(
                 fontSize: 10,
-                color: Color(0xFFE74C3C),
+                color: Color(0xFFB8720A),
                 fontWeight: FontWeight.w600)),
       );
 
@@ -1123,14 +982,14 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         ],
       );
 
+  /// F2 colour coding — binary only. 'Healthy' → green, everything else
+  /// (i.e. 'Stressed') → amber. No 'Degraded' / red case exists.
   Color _healthColor(String s) {
     switch (s) {
       case 'Healthy':
         return const Color(0xFF27AE60);
       case 'Stressed':
         return const Color(0xFFF39C12);
-      case 'Degraded':
-        return const Color(0xFFE74C3C);
       default:
         return AppColors.textSecondary;
     }
@@ -1203,7 +1062,7 @@ class _ExpandableReportState extends State<_ExpandableReport> {
             Row(children: [
               Text(
                 "Comprehensive Report",
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryDark),

@@ -34,12 +34,14 @@ class AppShell extends StatelessWidget {
   }
 
   // ── Bottom nav ────────────────────────────────────────────────────────────
-  Widget _buildBottomNav(
-      BuildContext context, NavigationProvider navProvider) {
-    final labels = navProvider.routes.map(_labelForRoute).toList();
-    final icons = navProvider.routes.map(_iconForRoute).toList();
+    Widget _buildBottomNav(
+    BuildContext context, NavigationProvider navProvider) {
+  final labels = navProvider.routes.map(_labelForRoute).toList();
+  final icons = navProvider.routes.map(_iconForRoute).toList();
 
-    return Padding(
+  return SafeArea(                    // ← add this
+    top: false,
+    child: Padding(
       padding: const EdgeInsets.all(16),
       child: Container(
         height: 70,
@@ -67,8 +69,10 @@ class AppShell extends StatelessWidget {
           }),
         ),
       ),
-    );
-  }
+    ),
+  );                                  // ← close the added SafeArea
+}
+
 
   Widget _navItem(BuildContext context, IconData icon, String label, int index,
       NavigationProvider navProvider) {

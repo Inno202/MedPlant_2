@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 class CloudinaryService {
-  static const String cloudName = 'dpvkfc93p';
+  static const String cloudName = 'dpvkfc93p'; 
 
   static const String uploadPreset =
       'medplant_uploads';
