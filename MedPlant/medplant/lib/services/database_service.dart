@@ -1,6 +1,7 @@
 // lib/services/database_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart';
 
 class DatabaseService {
@@ -8,58 +9,64 @@ class DatabaseService {
 
   // ── Submit report ────────────────────────────────────────────────────────
   static Future<String?> submitReport({
-    required String speciesName,
-    required bool identified,
-    required double confidence,
-    required String healthStatus,
-    required String trendDirection,
-    required List<String> damageLabels,
-    required String predictionNote,
-    required String location,
-    required String environmentalCondition,
-    required String degradationIndicator,
-    required String observerNotes,
-    required String severity,
-    String? imageUrl,
-  }) async {
-    try {
-      final uid = AuthService.currentUserId;
-      if (uid == null) return null;
-
-      final bool isFlagged = !identified;
-      final String reviewStatus = identified ? 'approved' : 'pending';
-
-      final docRef = await _db.collection('plant_reports').add({
-        'submittedBy': uid,
-        'speciesName': speciesName,
-        'identified': identified,
-        'confidence': confidence,
-        'healthStatus': healthStatus,
-        'trendDirection': trendDirection,
-        'damageLabels': damageLabels,
-        'damageDetected': damageLabels.isNotEmpty,
-        'predictionNote': predictionNote,
-        'location': location,
-        'environmentalCondition': environmentalCondition,
-        'degradationIndicator': degradationIndicator,
-        'observerNotes': observerNotes,
-        'severity': severity,
-        'imageUrl': imageUrl ?? '',
-        'isFlagged': isFlagged,
-        'reviewStatus': reviewStatus,
-        'submittedAt': FieldValue.serverTimestamp(),
-        'locationArea': 'Thaba-Nchu, Free State',
-      });
-
-      if (identified && healthStatus == 'Stressed') {
-        await _checkAndCreateAlert(speciesName);
-      }
-
-      return docRef.id;
-    } catch (e) {
+  required String speciesName,
+  required bool identified,
+  required double confidence,
+  required String healthStatus,
+  required String trendDirection,
+  required List<String> damageLabels,
+  required String predictionNote,
+  required String location,
+  required String environmentalCondition,
+  required String degradationIndicator,
+  required String observerNotes,
+  required String severity,
+  String? imageUrl,
+  String? gpsCoordinates,          // ← added
+}) async {
+  try {
+    final uid = AuthService.currentUserId;
+    if (uid == null) {
+      debugPrint('submitReport: no authenticated user — aborting');
       return null;
     }
+
+    final bool isFlagged = !identified;
+    final String reviewStatus = identified ? 'approved' : 'pending';
+
+    final docRef = await _db.collection('plant_reports').add({
+      'submittedBy': uid,
+      'speciesName': speciesName,
+      'identified': identified,
+      'confidence': confidence,
+      'healthStatus': healthStatus,
+      'trendDirection': trendDirection,
+      'damageLabels': damageLabels,
+      'damageDetected': damageLabels.isNotEmpty,
+      'predictionNote': predictionNote,
+      'location': location,
+      'environmentalCondition': environmentalCondition,
+      'degradationIndicator': degradationIndicator,
+      'observerNotes': observerNotes,
+      'severity': severity,
+      'imageUrl': imageUrl ?? '',
+      'gpsCoordinates': gpsCoordinates ?? '',   // ← added
+      'isFlagged': isFlagged,
+      'reviewStatus': reviewStatus,
+      'submittedAt': FieldValue.serverTimestamp(),
+      'locationArea': 'Thaba-Nchu, Free State',
+    });
+
+    if (identified && healthStatus == 'Stressed') {
+      await _checkAndCreateAlert(speciesName);
+    }
+
+    return docRef.id;
+  } catch (e, st) {
+    debugPrint('submitReport failed: $e\n$st');   // ← now visible in console
+    return null;
   }
+}
 
   // ── Visibility helper (used everywhere) ──────────────────────────────────
   /// A document is visible in the main feed if:

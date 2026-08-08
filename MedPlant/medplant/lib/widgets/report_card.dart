@@ -1,9 +1,16 @@
+// lib/widgets/report_card.dart
+// Restyled to match PlantCard: Card widget, AspectRatio image, structured
+// detail blocks with icon + label + truncated value. No more fixed image
+// height or independent inner scrolling — content drives card height,
+// consistent with the Wrap-based ReportGrid.
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
-class ReportCard extends StatefulWidget {
+class ReportCard extends StatelessWidget {
   final String? imageUrl;
   final String? imageBase64;
 
@@ -22,23 +29,13 @@ class ReportCard extends StatefulWidget {
     required this.description,
   });
 
-  @override
-  State<ReportCard> createState() => _ReportCardState();
-}
-
-class _ReportCardState extends State<ReportCard> {
-  bool isExpanded = false;
-  bool isHovered = false;
-
   Widget _buildImage() {
     // Base64 image (Firestore)
-    if (widget.imageBase64 != null && widget.imageBase64!.isNotEmpty) {
+    if (imageBase64 != null && imageBase64!.isNotEmpty) {
       try {
-        final bytes = base64Decode(widget.imageBase64!);
-
+        final bytes = base64Decode(imageBase64!);
         return Image.memory(
           Uint8List.fromList(bytes),
-          height: 260,
           width: double.infinity,
           fit: BoxFit.cover,
         );
@@ -48,13 +45,28 @@ class _ReportCardState extends State<ReportCard> {
     }
 
     // Network image (fallback or older data)
-    if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
-      print("IMAGE URL: ${widget.imageUrl}");
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
       return Image.network(
-        widget.imageUrl!,
-        height: 260,
+        imageUrl!,
         width: double.infinity,
         fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return Container(
+            color: AppColors.accentBg,
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                value: progress.expectedTotalBytes != null
+                    ? progress.cumulativeBytesLoaded /
+                        progress.expectedTotalBytes!
+                    : null,
+                color: AppColors.primarySoft,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => _errorImage(),
       );
     }
 
@@ -63,254 +75,177 @@ class _ReportCardState extends State<ReportCard> {
 
   Widget _errorImage() {
     return Container(
-      height: 260,
-      width: double.infinity,
-      color: Colors.grey[200],
+      color: AppColors.accentBg,
       child: const Center(
-        child: Icon(Icons.image_not_supported, size: 40),
+        child: Icon(Icons.image_not_supported,
+            size: 40, color: AppColors.primarySoft),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSoft),
-        color: Colors.white,
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 40, 20, 0.07),
-            blurRadius: 18,
-            offset: Offset(0, 4),
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Image ───────────────────────────────────────────────────
+          ClipRRect(
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(12)),
+            child: AspectRatio(
+              aspectRatio: 1.3,
+              child: _buildImage(),
+            ),
+          ),
+
+          // ── Body ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Location (title)
+                Text(
+                  location,
+                  style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: AppColors.primaryDark,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 2),
+
+                // Date
+                Row(children: [
+                  const Icon(Icons.calendar_today,
+                      size: 11, color: AppColors.textSecondary),
+                  const SizedBox(width: 3),
+                  Text(
+                    date,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ]),
+
+                const SizedBox(height: 8),
+
+                // ── Badges row ──────────────────────────────────────
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    _Badge(
+                      label: environment,
+                      color: AppColors.primary,
+                      icon: Icons.thermostat,
+                    ),
+                  ],
+                ),
+
+                // ── Description ──────────────────────────────────────
+                if (description.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Divider(height: 1, color: AppColors.borderSoft),
+                  const SizedBox(height: 8),
+                  _detailBlock(
+                    icon: Icons.notes,
+                    label: "Observation",
+                    value: description,
+                    maxLines: 3,
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SingleChildScrollView(
+    );
+  }
+
+  // ── Reusable label + truncated value block (matches PlantCard) ──────────
+  Widget _detailBlock({
+    required IconData icon,
+    required String label,
+    required String value,
+    required int maxLines,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: AppColors.primary),
+        const SizedBox(width: 5),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── IMAGE ─────────────────────────────────────────────
-              Stack(
-                children: [
-                  _buildImage(),
-
-                  Positioned.fill(
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [Colors.black54, Colors.transparent],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // const Positioned(
-                  //   bottom: 10,
-                  //   left: 12,
-                  //   child: Row(
-                  //     children: [
-                  //       Icon(Icons.search, color: Colors.white, size: 16),
-                  //       SizedBox(width: 6),
-                  //       Text(
-                  //         "Click to enlarge",
-                  //         style: TextStyle(
-                  //           color: Colors.white,
-                  //           fontSize: 12,
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-                ],
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
+                ),
               ),
-
-              // ── CONTENT ───────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // DATE + LOCATION
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentBg,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.calendar_today,
-                                    size: 12,
-                                    color: AppColors.primaryDark),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    widget.date,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primaryDark,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              const Icon(Icons.location_on,
-                                  size: 12, color: AppColors.primary),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  widget.location,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // ENVIRONMENT
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentBg,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.thermostat,
-                              size: 12, color: AppColors.primary),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              widget.environment,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primaryDark,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-                    const Divider(color: AppColors.borderSoft),
-                    const SizedBox(height: 10),
-
-                    // DESCRIPTION
-                    MouseRegion(
-                      onEnter: (_) => setState(() => isHovered = true),
-                      onExit: (_) => setState(() => isHovered = false),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() => isExpanded = !isExpanded);
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                const Text("❝",
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        color: AppColors.primarySoft)),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    widget.description,
-                                    maxLines: isExpanded ? null : 3,
-                                    overflow: isExpanded
-                                        ? TextOverflow.visible
-                                        : TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      height: 1.4,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (!isExpanded &&
-                                (isHovered ||
-                                    widget.description.length > 100))
-                              const Padding(
-                                padding: EdgeInsets.only(top: 4),
-                                child: Text(
-                                  "Read more...",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-                    const Divider(color: AppColors.borderSoft),
-                    // const SizedBox(height: 8),
-
-                    // const Row(
-                    //   children: [
-                    //     Icon(Icons.camera_alt,
-                    //         size: 14, color: AppColors.primary),
-                    //     SizedBox(width: 6),
-                    //     Text(
-                    //       "Read full report",
-                    //       style: TextStyle(
-                    //         fontSize: 12,
-                    //         color: AppColors.primary,
-                    //         fontWeight: FontWeight.w600,
-                    //       ),
-                    //     ),
-                    //     SizedBox(width: 6),
-                    //     Icon(Icons.arrow_forward,
-                    //         size: 14, color: AppColors.primary),
-                    //   ],
-                    // ),
-                  ],
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: maxLines,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textPrimary,
+                  height: 1.4,
                 ),
               ),
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+// ── Small reusable badge (identical to PlantCard's _Badge) ─────────────────
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+
+  const _Badge({required this.label, required this.color, this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 10, color: color),
+            const SizedBox(width: 3),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:medplant/models/user_role.dart';
+import 'package:medplant/widgets/report_grid.dart';
 import 'package:provider/provider.dart';
 import 'package:medplant/constants/app_colors.dart';
 import 'package:medplant/providers/user_provider.dart';
@@ -148,38 +149,28 @@ class ViewReportsScreen extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   Expanded(
-                    child: GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: width < 700 ? 1 : 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: width < 700 ? 1.05 : 0.78,
-                      ),
-                      itemCount: visibleDocs.length,
-                      itemBuilder: (context, index) {
-                        final doc = visibleDocs[index].data()
-                            as Map<String, dynamic>;
-
-                        return ReportCard(
-                          imageUrl: doc['imageUrl'] ?? '',
-                          location: doc['location'] ?? 'Unknown location',
-                          date: doc['submittedAt'] != null
-                              ? (doc['submittedAt'] as Timestamp)
-                                  .toDate()
-                                  .toString()
-                                  .split(' ')
-                                  .first
-                              : 'No date',
-                          environment:
-                              doc['environmentalCondition'] ?? 'Unknown',
-                          description:
-                              doc['observerNotes'] ?? 'No description',
-                        );
-                      },
-                    ),
-                  ),
+  child: SingleChildScrollView(
+    padding: const EdgeInsets.all(16),
+    child: ReportGrid(
+      reports: visibleDocs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return ReportCard(
+          imageUrl: data['imageUrl'] ?? '',
+          location: data['location'] ?? 'Unknown location',
+          date: data['submittedAt'] != null
+              ? (data['submittedAt'] as Timestamp)
+                  .toDate()
+                  .toString()
+                  .split(' ')
+                  .first
+              : 'No date',
+          environment: data['environmentalCondition'] ?? 'Unknown',
+          description: data['observerNotes'] ?? 'No description',
+        );
+      }).toList(),
+    ),
+  ),
+),
                 ],
               );
             },
