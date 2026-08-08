@@ -1,7 +1,8 @@
 // lib/screens/user/add_report_screen.dart
-// Uses F1 (species identification) only.
-// Shows "Identified as Lessertia frutescens" or "Plant not identified".
-// F2 and F3 are handled separately on the Predictions screen.
+// F1 (species identification) runs at image-pick time.
+// F2 (leaf health) + F3 (trend) are refined at submit time using the
+// species' real prior scores from Firestore, so the submitted report
+// carries accurate ML output instead of hardcoded placeholders.
 
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -55,7 +56,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
     super.dispose();
   }
 
-  // ── Pick image and run F1 ─────────────────────────────────────────────────────
+  // ── Pick image and run F1 (+ initial F2/F3 with no prior history) ────────────
   Future<void> _pickImage(ImageSource source) async {
     final picked = await _picker.pickImage(source: source, imageQuality: 85);
     if (picked == null) return;
@@ -69,10 +70,14 @@ class _AddReportScreenState extends State<AddReportScreen> {
       _idResult = null;
     });
 
-    // F1 only — species identification
+    // F1 + F2 + F3 — species ID first pass. Prior scores aren't known yet
+    // (species isn't confirmed until this call returns), so trend here is
+    // provisional. It gets refined with real prior scores at submit time.
     final result = await MLService.runFullPipelineFromBytes(
       bytes,
       fileName: picked.name,
+      reportedSeverity: _severity,
+      environmentalCondition: _environmentalCondition,
     );
 
     if (!mounted) return;
@@ -88,6 +93,31 @@ class _AddReportScreenState extends State<AddReportScreen> {
           ? _IDState.identified
           : _IDState.notIdentified;
     });
+  }
+
+  /// Re-runs F2+F3 at submit time using the species' real prior scores from
+  /// Firestore, plus the final severity/environment values chosen in the
+  /// form. Falls back to the pick-time result if this refinement fails or
+  /// isn't applicable (species not identified).
+  Future<SpeciesIdentificationResult?> _refineWithPriorHistory() async {
+    if (_idResult == null || !_idResult!.identified || _imageBytes == null) {
+      return _idResult;
+    }
+
+    final priorScores =
+        await DatabaseService.getPriorScores(_idResult!.species);
+
+    final refined = await MLService.runFullPipelineFromBytes(
+      _imageBytes!,
+      fileName: _imageFile?.name ?? 'image.jpg',
+      priorScores: priorScores,
+      reportedSeverity: _severity,
+      environmentalCondition: _environmentalCondition,
+    );
+
+    // Fall back to the original result if the refinement call fails —
+    // better to submit provisional-trend data than to block submission.
+    return refined ?? _idResult;
   }
 
   void _showSourceSheet() {
@@ -559,15 +589,17 @@ class _AddReportScreenState extends State<AddReportScreen> {
   }
 
   // ── Buttons ───────────────────────────────────────────────────────────────────
+  // Stacked full-width, submit on top / cancel below — matches the
+  // PrimaryButton + OutlinedButtonWidget alignment used on the
+  // login/register screens instead of the old side-by-side Wrap layout.
   Widget _buildButtons() {
     final bool isLoading = _idState == _IDState.loading;
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 10,
-      alignment: WrapAlignment.center,
+    return Column(
       children: [
-        ElevatedButton.icon(
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor:
     (isLoading || _submitting)
@@ -597,47 +629,40 @@ class _AddReportScreenState extends State<AddReportScreen> {
         });
 
         try {
-          // Convert image to base64
-          final imageUrl =
-    await CloudinaryService.uploadImage(
-  _imageBytes!,
-);
+          // Upload image to Cloudinary
+          final imageUrl = await CloudinaryService.uploadImage(_imageBytes!);
 
-if (imageUrl == null) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text(
-        "Failed to upload image",
-      ),
-    ),
-  );
+          if (imageUrl == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Failed to upload image"),
+              ),
+            );
+            setState(() => _submitting = false);
+            return;
+          }
 
-  setState(() {
-    _submitting = false;
-  });
-
-  return;
-}
+          // Refine F2/F3 with the species' real prior history before
+          // submitting — replaces the old 'Healthy'/'Stable' placeholders
+          // with a genuine ML result, consistent with the Predictions screen.
+          final finalResult = await _refineWithPriorHistory();
 
           final result = await DatabaseService.submitReport(
-            speciesName:
-                _idResult?.species ?? "Unknown species",
+            speciesName: finalResult?.species ?? "Unknown species",
 
-            identified:
-                _idResult?.identified ?? false,
+            identified: finalResult?.identified ?? false,
 
-            confidence:
-                _idResult?.confidence ?? 0.0,
+            confidence: finalResult?.confidence ?? 0.0,
 
-            // F2 placeholders for now
-            healthStatus: 'Healthy',
-            trendDirection: 'Stable',
+            // Real F2 + F3 output (was hardcoded 'Healthy' / 'Stable')
+            healthStatus: finalResult?.healthStatus ?? 'Healthy',
+            trendDirection: finalResult?.trendDirection ?? 'Stable',
 
-            // F3 placeholders
-            damageLabels: [],
+            // Real F2 supporting evidence (was hardcoded [])
+            damageLabels: finalResult?.damageLabels ?? [],
 
             predictionNote:
-                _idResult?.message ??
+                finalResult?.message ??
                 'Manual observation submission',
 
             // Form values
@@ -701,21 +726,26 @@ if (imageUrl == null) {
   _submitting ? "Submitting..." : "Submit Report",
   style: GoogleFonts.lato(color: Colors.white),
 ),
-        ),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 28, vertical: 16),
-            side: const BorderSide(
-                color: AppColors.primaryDark, width: 2),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(50)),
           ),
-          onPressed: () => context.go('/viewreports'),
-          icon:
-              const Icon(Icons.close, color: AppColors.primaryDark),
-          label: Text("Cancel",
-              style: GoogleFonts.lato(color: AppColors.primaryDark)),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 28, vertical: 16),
+              side: const BorderSide(
+                  color: AppColors.primaryDark, width: 2),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50)),
+            ),
+            onPressed: () => context.go('/viewreports'),
+            icon:
+                const Icon(Icons.close, color: AppColors.primaryDark),
+            label: Text("Cancel",
+                style: GoogleFonts.lato(color: AppColors.primaryDark)),
+          ),
         ),
       ],
     );

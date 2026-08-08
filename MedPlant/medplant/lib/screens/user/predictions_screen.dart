@@ -20,18 +20,15 @@
 //     report's stored imageUrl + context fields → save result to ml_predictions
 //  4. Display submission history timeline from ml_predictions, newest first
 //
-// NOTE: Because firebase_core / cloud_firestore are not yet in pubspec.yaml,
-// the Firestore calls are wrapped in a FirestoreService abstraction that uses
-// dummy data as a fallback when firebase is not initialised. Swap the
-// _PlantReportData list and _savePrediction() body for real Firestore calls
-// once you add the firebase dependencies.
+// Firestore-backed: reads plant_reports, caches results in ml_predictions.
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:medplant/constants/app_colors.dart';
+import 'package:medplant/services/database_service.dart';
 import 'package:medplant/services/ml_service.dart';
 import 'package:medplant/widgets/section_header.dart';
-import 'package:medplant/widgets/info_note.dart';
 
 // ── Lightweight data model matching Firestore plant_reports documents ─────────
 class _PlantReport {
@@ -39,10 +36,10 @@ class _PlantReport {
   final String imageUrl;
   final String location;
   final String date;
-  final String environment;        // maps to environmental_condition
-  final String description;        // observer notes
+  final String environment; // maps to environmentalCondition
+  final String description; // observer notes
   final String degradationIndicator;
-  final String severity;           // "1"–"5"
+  final String severity; // "1"–"5"
 
   const _PlantReport({
     required this.id,
@@ -56,15 +53,23 @@ class _PlantReport {
   });
 
   /// Build from a Firestore document map.
+  /// Field names match what DatabaseService.submitReport() actually writes
+  /// (camelCase), not the old snake_case placeholders.
   factory _PlantReport.fromMap(String id, Map<String, dynamic> m) =>
       _PlantReport(
         id: id,
-        imageUrl: m['image'] ?? m['imageUrl'] ?? '',
+        imageUrl: m['imageUrl'] ?? '',
         location: m['location'] ?? '',
-        date: m['date'] ?? '',
-        environment: m['environment'] ?? 'Normal',
-        description: m['description'] ?? '',
-        degradationIndicator: m['degradation_indicator'] ?? 'None observed',
+        date: m['submittedAt'] is Timestamp
+            ? (m['submittedAt'] as Timestamp)
+                .toDate()
+                .toString()
+                .split(' ')
+                .first
+            : (m['date'] ?? ''),
+        environment: m['environmentalCondition'] ?? 'Normal',
+        description: m['observerNotes'] ?? '',
+        degradationIndicator: m['degradationIndicator'] ?? 'None observed',
         severity: m['severity']?.toString() ?? '1',
       );
 }
@@ -112,110 +117,50 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
 
   List<_AnalysedReport> _items = [];
 
-  // ── Firestore helpers (swap bodies for real firebase calls) ───────────────
+  // ── Firestore: fetch reports ───────────────────────────────────────────────
   Future<List<_PlantReport>> _fetchPlantReports() async {
-    // ── REAL FIRESTORE (uncomment once firebase is added to pubspec.yaml) ──
-    // final snapshot = await FirebaseFirestore.instance
-    //     .collection('plant_reports')
-    //     .orderBy('date', descending: true)
-    //     .get();
-    // return snapshot.docs
-    //     .map((d) => _PlantReport.fromMap(d.id, d.data()))
-    //     .toList();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('plant_reports')
+        .orderBy('submittedAt', descending: true)
+        .get();
 
-    // ── FALLBACK / DEMO: mirrors the dummy data in ViewReportsScreen ─────
-    await Future.delayed(const Duration(milliseconds: 600));
-    return [
-      const _PlantReport(
-        id: 'rpt_001',
-        imageUrl: 'https://images.unsplash.com/photo-1473773508845-188df298d2d1?w=800',
-        location: 'Thaba-Nchu hillside, near stream',
-        date: '2026-05-08',
-        environment: 'Hot',
-        description:
-            'Significant browning on lower leaves. Several stems appear wilted. '
-            'Traditional healer noted reduced plant population in this area.',
-        degradationIndicator: 'Over-harvesting',
-        severity: '4',
-      ),
-      const _PlantReport(
-        id: 'rpt_002',
-        imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=800',
-        location: 'Thaba-Nchu eastern slope',
-        date: '2026-05-03',
-        environment: 'Dry',
-        description:
-            'Mild discolouration on upper leaves. Plant otherwise appears structurally intact. '
-            'Dry soil noted around root base.',
-        degradationIndicator: 'Drought stress',
-        severity: '2',
-      ),
-      const _PlantReport(
-        id: 'rpt_003',
-        imageUrl: 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800',
-        location: 'Thaba-Nchu valley, near river bank',
-        date: '2026-04-28',
-        environment: 'Wet / After rain',
-        description:
-            'Plant looks healthy after recent rainfall. New shoots visible at the base. '
-            'Good leaf coverage and normal colouration.',
-        degradationIndicator: 'None observed',
-        severity: '1',
-      ),
-      const _PlantReport(
-        id: 'rpt_004',
-        imageUrl: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800',
-        location: 'Thaba-Nchu community gardens',
-        date: '2026-04-21',
-        environment: 'Normal',
-        description:
-            'Healthy specimen. No visible stress indicators. '
-            'Community member noted this area is protected from livestock.',
-        degradationIndicator: 'None observed',
-        severity: '1',
-      ),
-      const _PlantReport(
-        id: 'rpt_005',
-        imageUrl: 'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=800',
-        location: 'Thaba-Nchu northern boundary',
-        date: '2026-04-14',
-        environment: 'Windy',
-        description:
-            'Wind damage visible on outer leaves. Some stem bending observed. '
-            'Overall plant appears alive but stressed.',
-        degradationIndicator: 'None observed',
-        severity: '2',
-      ),
-    ];
+    final visible = snapshot.docs.where((d) {
+      final data = d.data();
+      return DatabaseService.isReportVisible(data) &&
+          (data['speciesName'] == 'Lessertia frutescens');
+    });
+
+    return visible.map((d) => _PlantReport.fromMap(d.id, d.data())).toList();
   }
 
+  // ── Firestore: cache read ────────────────────────────────────────────────
   Future<ContextualAnalysisResult?> _fetchCachedPrediction(
       String reportId) async {
-    // ── REAL FIRESTORE ──
-    // final doc = await FirebaseFirestore.instance
-    //     .collection('ml_predictions')
-    //     .doc(reportId)
-    //     .get();
-    // if (doc.exists) {
-    //   return ContextualAnalysisResult.fromJson(
-    //       doc.data()! as Map<String, dynamic>);
-    // }
-    return null; // no cache in demo
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('ml_predictions')
+          .doc(reportId)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        return ContextualAnalysisResult.fromJson(doc.data()!);
+      }
+    } catch (e) {
+      debugPrint('Cache read failed for $reportId: $e');
+    }
+    return null;
   }
 
-  Future<void> _savePrediction(
-      String reportId, String date, String env,
+  // ── Firestore: cache write ───────────────────────────────────────────────
+  Future<void> _savePrediction(String reportId, String date, String env,
       ContextualAnalysisResult result) async {
-    // ── REAL FIRESTORE ──
-    // await FirebaseFirestore.instance
-    //     .collection('ml_predictions')
-    //     .doc(reportId)
-    //     .set(result.toFirestoreMap(
-    //       reportId: reportId,
-    //       date: date,
-    //       env: env,
-    //     ));
-    debugPrint('Prediction saved for $reportId (demo — no Firestore)');
+    try {
+      await FirebaseFirestore.instance
+          .collection('ml_predictions')
+          .doc(reportId)
+          .set(result.toFirestoreMap(reportId: reportId, date: date, env: env));
+    } catch (e) {
+      debugPrint('Cache write failed for $reportId: $e');
+    }
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
@@ -398,9 +343,6 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                 const SizedBox(height: 10),
                 ..._items.map(_buildHistoryCard),
               ],
-
-              // const SizedBox(height: 20),
-              // const InfoNote(),
             ],
           ),
         ),

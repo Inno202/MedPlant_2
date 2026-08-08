@@ -1,7 +1,8 @@
 // lib/widgets/plant_card.dart
 // Displays a registered species card using live Firestore data mapped
 // through PlantModel. Shows: image, name, local name, family,
-// conservation status badge, and health status if present.
+// conservation status badge, health status, description, medicinal uses,
+// and harvesting season — no "Read More" tap-through needed.
 
 import 'package:flutter/material.dart';
 import '../models/plant_model.dart';
@@ -57,37 +58,37 @@ class PlantCard extends StatelessWidget {
           ClipRRect(
             borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(12)),
-            // AFTER — image scales with card width instead of being fixed
-child: AspectRatio(
-  aspectRatio: 1.3, // width : height of the image area
-  child: Image.network(
-    plant.imageUrl,
-    width: double.infinity,
-    fit: BoxFit.cover,
-    loadingBuilder: (context, child, progress) {
-      if (progress == null) return child;
-      return Container(
-        color: AppColors.accentBg,
-        child: Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            value: progress.expectedTotalBytes != null
-                ? progress.cumulativeBytesLoaded /
-                    progress.expectedTotalBytes!
-                : null,
-            color: AppColors.primarySoft,
-          ),
-        ),
-      );
-    },
-    errorBuilder: (context, error, stackTrace) => Container(
-      color: AppColors.accentBg,
-      child: const Center(
-        child: Icon(Icons.eco, size: 48, color: AppColors.primarySoft),
-      ),
-    ),
-  ),
-),
+            child: AspectRatio(
+              aspectRatio: 1.3, // width : height of the image area
+              child: Image.network(
+                plant.imageUrl,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: AppColors.accentBg,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: progress.expectedTotalBytes != null
+                            ? progress.cumulativeBytesLoaded /
+                                progress.expectedTotalBytes!
+                            : null,
+                        color: AppColors.primarySoft,
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: AppColors.accentBg,
+                  child: const Center(
+                    child: Icon(Icons.eco,
+                        size: 48, color: AppColors.primarySoft),
+                  ),
+                ),
+              ),
+            ),
           ),
 
           // ── Body ────────────────────────────────────────────────────
@@ -190,36 +191,112 @@ child: AspectRatio(
                   ],
                 ),
 
-                const SizedBox(height: 10),
-
-                // Read More button
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () {},
-                    style: TextButton.styleFrom(
-                      backgroundColor: AppColors.accentBg,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8, horizontal: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: Text(
-                      "Read More",
-                      style: GoogleFonts.lato(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
+                // ── Description ──────────────────────────────────────
+                if (plant.description != null &&
+                    plant.description!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Divider(height: 1, color: AppColors.borderSoft),
+                  const SizedBox(height: 8),
+                  _detailBlock(
+                    icon: Icons.info_outline,
+                    label: "Description",
+                    value: plant.description!,
+                    maxLines: 3,
                   ),
-                ),
+                ],
+
+                // ── Medicinal uses ────────────────────────────────────
+                if (plant.medicinalUses != null &&
+                    plant.medicinalUses!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _detailBlock(
+                    icon: Icons.medical_services_outlined,
+                    label: "Medicinal Uses",
+                    value: plant.medicinalUses!,
+                    maxLines: 2,
+                  ),
+                ],
+
+                // ── Harvesting season ──────────────────────────────────
+                if (plant.harvestingSeason != null &&
+                    plant.harvestingSeason!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.calendar_month_outlined,
+                          size: 13, color: AppColors.primary),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textPrimary,
+                                height: 1.4),
+                            children: [
+                              const TextSpan(
+                                text: "Harvest: ",
+                                style:
+                                    TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              TextSpan(text: plant.harvestingSeason!),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // ── Reusable label + truncated value block ──────────────────────────────
+  Widget _detailBlock({
+    required IconData icon,
+    required String label,
+    required String value,
+    required int maxLines,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: AppColors.primary),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: maxLines,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textPrimary,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
