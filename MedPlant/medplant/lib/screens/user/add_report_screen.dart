@@ -2,6 +2,26 @@
 // Uses F1 (species identification) + real F2/F3 (health/trend) from the
 // same ML pipeline call — no hardcoded 'Healthy'/'Stable' at submit.
 //
+// IMPORTANT — two-role version (communityUser / researcher):
+// The form no longer gates on species identification. Any processed image
+// (identified OR not) unlocks fields 2–6, because unidentified submissions
+// are a legitimate first-class outcome here: they get flagged and routed
+// to the researcher's review queue (ApproveReportsScreen), not blocked at
+// submission. Gating the whole form on "is this Lessertia?" would make it
+// impossible to ever produce a flagged submission for the researcher to
+// review — which defeats the point of that role.
+//
+// Species naming:
+//   - identified == true  → speciesName = ML-identified species
+//   - identified == false → speciesName = "Unidentified — pending review"
+//     The researcher assigns the real species name when they approve the
+//     report in ApproveReportsScreen (see DatabaseService.approveReport).
+//
+// Required fields:
+//   Location and Observer Notes are now wrapped in a Form and validated —
+//   the submit button will reject the attempt with an inline error on any
+//   empty required field instead of silently accepting blank data.
+//
 // Flow on image pick:
 //   1. Run the full pipeline once (species unknown → no prior history).
 //   2. If identified, fetch this species' real prior scores from Firestore
@@ -9,9 +29,9 @@
 //      reflect actual submission history instead of an empty baseline.
 //   3. That refined result (_idResult) is what gets submitted.
 //
-// Fields 2-6 are locked (dimmed + non-interactive) until F1 confirms
-// identification. GPS is captured automatically via the device's real
-// location the moment identification succeeds (geolocator-backed).
+// Fields 2-6 unlock once the pipeline finishes (identified or not). GPS is
+// captured automatically via the device's real location the moment the
+// pipeline completes (geolocator-backed).
 //
 // No AuthGuard here — guests can browse and fill out the whole form.
 // Login is only required at the moment of submission (enforced client-side
@@ -38,6 +58,11 @@ extension SpeciesIdentificationResultExtras on FullPipelineResult {
   String get message => predictionNote;
 }
 
+/// Species name written to Firestore when the ML pipeline can't confirm a
+/// match. The researcher overwrites this with the correct species name
+/// when approving the report in ApproveReportsScreen.
+const String kUnidentifiedSpeciesPlaceholder = 'Unidentified — pending review';
+
 enum _IDState { idle, loading, identified, notIdentified, serverError }
 
 class AddReportScreen extends StatefulWidget {
@@ -48,6 +73,9 @@ class AddReportScreen extends StatefulWidget {
 }
 
 class _AddReportScreenState extends State<AddReportScreen> {
+  // ── Form ─────────────────────────────────────────────────────────────────
+  final _formKey = GlobalKey<FormState>();
+
   // ── Image ────────────────────────────────────────────────────────────────
   Uint8List? _imageBytes;
   XFile? _imageFile;
@@ -61,7 +89,13 @@ class _AddReportScreenState extends State<AddReportScreen> {
 
   bool get _isIdentified => _idState == _IDState.identified;
 
-  // ── Form ─────────────────────────────────────────────────────────────────
+  /// The form (fields 2–6) and the submit button unlock as soon as the ML
+  /// pipeline has returned a result — identified or not. Unidentified
+  /// reports are still valid submissions; they just get flagged for
+  /// researcher review instead of auto-approved.
+  bool get _pipelineDone =>
+      _idState == _IDState.identified || _idState == _IDState.notIdentified;
+
   final _locationController = TextEditingController();
   final _observationController = TextEditingController();
   String _environmentalCondition = 'Normal';
@@ -69,6 +103,13 @@ class _AddReportScreenState extends State<AddReportScreen> {
   String _severity = '1';
 
   final ImagePicker _picker = ImagePicker();
+
+  String? _requiredValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return "This field is required";
+    }
+    return null;
+  }
 
   @override
   void dispose() {
@@ -148,14 +189,14 @@ class _AddReportScreenState extends State<AddReportScreen> {
           : _IDState.notIdentified;
     });
 
-    // ── Auto-capture real GPS the moment identification succeeds ─────────
+    // ── Auto-capture real GPS once the pipeline is done ───────────────────
+    // Runs whether or not the species was identified — an unidentified
+    // report still needs a location for the researcher's review queue.
     // Scheduled after the current frame finishes to avoid
     // "setState() called during build".
-    if (finalResult.identified) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _captureGps();
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _captureGps();
+    });
   }
 
   void _showSourceSheet() {
@@ -242,12 +283,12 @@ class _AddReportScreenState extends State<AddReportScreen> {
         ),
       ]);
     }
-    if (!_isIdentified) {
+    if (!_pipelineDone) {
       return Row(children: [
         Icon(Icons.gps_not_fixed, size: 12, color: Colors.grey[500]),
         const SizedBox(width: 4),
         Text(
-          "GPS will be captured once the plant is identified",
+          "GPS will be captured once the image has been processed",
           style: TextStyle(fontSize: 11, color: Colors.grey[500]),
         ),
       ]);
@@ -297,204 +338,213 @@ class _AddReportScreenState extends State<AddReportScreen> {
                   _buildHeader(),
                   Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── 1. Image (always active) ────────────────────
-                        _sectionLabel("1. Plant Image"),
-                        const SizedBox(height: 8),
-                        _buildImageArea(),
-                        const SizedBox(height: 6),
-                        Text(
-                          "Photo is automatically checked against the Lessertia frutescens species register.",
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary),
-                        ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── 1. Image (always active) ────────────────
+                          _sectionLabel("1. Plant Image"),
+                          const SizedBox(height: 8),
+                          _buildImageArea(),
+                          const SizedBox(height: 6),
+                          Text(
+                            "Photo is automatically checked against the Lessertia frutescens species register.",
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary),
+                          ),
 
-                        // ── Species ID result ────────────────────────────
-                        if (_idState != _IDState.idle) ...[
-                          const SizedBox(height: 16),
-                          _buildIDResult(),
-                        ],
+                          // ── Species ID result ────────────────────────
+                          if (_idState != _IDState.idle) ...[
+                            const SizedBox(height: 16),
+                            _buildIDResult(),
+                          ],
 
-                        // ── Locked section: 2–6 ──────────────────────────
-                        AbsorbPointer(
-                          absorbing: !_isIdentified,
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 200),
-                            opacity: _isIdentified ? 1.0 : 0.4,
-                            child: Column(
+                          // ── Locked section: 2–6 ──────────────────────
+                          // Unlocks on _pipelineDone (identified OR
+                          // notIdentified) — not on _isIdentified. An
+                          // unidentified plant still needs a full report so
+                          // it can be flagged for researcher review.
+                          AbsorbPointer(
+                            absorbing: !_pipelineDone,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: _pipelineDone ? 1.0 : 0.4,
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  // ── 2. Location (required) ─────────
+                                  const SizedBox(height: 20),
+                                  _sectionLabel(
+                                      "2. Observation Location *"),
+                                  const SizedBox(height: 8),
+                                  CustomTextField(
+                                    label: "",
+                                    hint:
+                                        "e.g. Thaba-Nchu hillside, near stream",
+                                    icon: Icons.location_on,
+                                    controller: _locationController,
+                                    validator: _requiredValidator,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  _buildGpsRow(),
+
+                                  // ── 3. Environmental condition ──────
+                                  const SizedBox(height: 20),
+                                  _sectionLabel(
+                                      "3. Environmental Condition"),
+                                  const SizedBox(height: 8),
+                                  CustomDropdown(
+                                    value: _environmentalCondition,
+                                    items: const [
+                                      DropdownMenuItem(
+                                          value: 'Normal',
+                                          child: Text('Normal')),
+                                      DropdownMenuItem(
+                                          value: 'Hot',
+                                          child: Text('Hot')),
+                                      DropdownMenuItem(
+                                          value: 'Cold',
+                                          child: Text('Cold')),
+                                      DropdownMenuItem(
+                                          value: 'Wet / After rain',
+                                          child:
+                                              Text('Wet / After rain')),
+                                      DropdownMenuItem(
+                                          value: 'Dry',
+                                          child: Text('Dry')),
+                                      DropdownMenuItem(
+                                          value: 'Windy',
+                                          child: Text('Windy')),
+                                      DropdownMenuItem(
+                                          value: 'Frost',
+                                          child: Text('Frost')),
+                                    ],
+                                    onChanged: (v) => setState(() =>
+                                        _environmentalCondition = v!),
+                                  ),
+
+                                  // ── 4. Degradation indicator ────────
+                                  const SizedBox(height: 20),
+                                  _sectionLabel(
+                                      "4. Degradation Indicator"),
+                                  const SizedBox(height: 8),
+                                  CustomDropdown(
+                                    value: _degradationIndicator,
+                                    items: const [
+                                      DropdownMenuItem(
+                                          value: 'None observed',
+                                          child: Text('None observed')),
+                                      DropdownMenuItem(
+                                          value: 'Over-harvesting',
+                                          child:
+                                              Text('Over-harvesting')),
+                                      DropdownMenuItem(
+                                          value: 'Land use change',
+                                          child:
+                                              Text('Land use change')),
+                                      DropdownMenuItem(
+                                          value: 'Pollution',
+                                          child: Text('Pollution')),
+                                      DropdownMenuItem(
+                                          value: 'Drought stress',
+                                          child:
+                                              Text('Drought stress')),
+                                      DropdownMenuItem(
+                                          value: 'Flooding',
+                                          child: Text('Flooding')),
+                                      DropdownMenuItem(
+                                          value: 'Fire damage',
+                                          child: Text('Fire damage')),
+                                      DropdownMenuItem(
+                                          value:
+                                              'Invasive species nearby',
+                                          child: Text(
+                                              'Invasive species nearby')),
+                                    ],
+                                    onChanged: (v) => setState(() =>
+                                        _degradationIndicator = v!),
+                                  ),
+
+                                  // ── 5. Observer notes (required) ────
+                                  const SizedBox(height: 20),
+                                  _sectionLabel("5. Observer Notes *"),
+                                  const SizedBox(height: 8),
+                                  CustomTextField(
+                                    label: "",
+                                    hint:
+                                        "Describe leaf condition, colour, size, surrounding vegetation...",
+                                    icon: Icons.notes,
+                                    controller: _observationController,
+                                    validator: _requiredValidator,
+                                  ),
+
+                                  // ── 6. Severity ─────────────────────
+                                  const SizedBox(height: 20),
+                                  _sectionLabel(
+                                      "6. Overall Severity (your assessment)"),
+                                  const SizedBox(height: 8),
+                                  CustomDropdown(
+                                    value: _severity,
+                                    items: const [
+                                      DropdownMenuItem(
+                                          value: '1',
+                                          child: Text(
+                                              '1 — No visible damage')),
+                                      DropdownMenuItem(
+                                          value: '2',
+                                          child: Text(
+                                              '2 — Minor stress')),
+                                      DropdownMenuItem(
+                                          value: '3',
+                                          child: Text(
+                                              '3 — Moderate stress')),
+                                      DropdownMenuItem(
+                                          value: '4',
+                                          child: Text(
+                                              '4 — Severe stress')),
+                                      DropdownMenuItem(
+                                          value: '5',
+                                          child: Text(
+                                              '5 — Critical / dying')),
+                                    ],
+                                    onChanged: (v) =>
+                                        setState(() => _severity = v!),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          if (!_pipelineDone) ...[
+                            const SizedBox(height: 10),
+                            Row(
                               crossAxisAlignment:
                                   CrossAxisAlignment.start,
                               children: [
-                                // ── 2. Location ───────────────────────
-                                const SizedBox(height: 20),
-                                _sectionLabel(
-                                    "2. Observation Location"),
-                                const SizedBox(height: 8),
-                                CustomTextField(
-                                  label: "",
-                                  hint:
-                                      "e.g. Thaba-Nchu hillside, near stream",
-                                  icon: Icons.location_on,
-                                  controller: _locationController,
-                                ),
-                                const SizedBox(height: 4),
-                                _buildGpsRow(),
-
-                                // ── 3. Environmental condition ────────
-                                const SizedBox(height: 20),
-                                _sectionLabel(
-                                    "3. Environmental Condition"),
-                                const SizedBox(height: 8),
-                                CustomDropdown(
-                                  value: _environmentalCondition,
-                                  items: const [
-                                    DropdownMenuItem(
-                                        value: 'Normal',
-                                        child: Text('Normal')),
-                                    DropdownMenuItem(
-                                        value: 'Hot',
-                                        child: Text('Hot')),
-                                    DropdownMenuItem(
-                                        value: 'Cold',
-                                        child: Text('Cold')),
-                                    DropdownMenuItem(
-                                        value: 'Wet / After rain',
-                                        child:
-                                            Text('Wet / After rain')),
-                                    DropdownMenuItem(
-                                        value: 'Dry',
-                                        child: Text('Dry')),
-                                    DropdownMenuItem(
-                                        value: 'Windy',
-                                        child: Text('Windy')),
-                                    DropdownMenuItem(
-                                        value: 'Frost',
-                                        child: Text('Frost')),
-                                  ],
-                                  onChanged: (v) => setState(() =>
-                                      _environmentalCondition = v!),
-                                ),
-
-                                // ── 4. Degradation indicator ──────────
-                                const SizedBox(height: 20),
-                                _sectionLabel(
-                                    "4. Degradation Indicator"),
-                                const SizedBox(height: 8),
-                                CustomDropdown(
-                                  value: _degradationIndicator,
-                                  items: const [
-                                    DropdownMenuItem(
-                                        value: 'None observed',
-                                        child: Text('None observed')),
-                                    DropdownMenuItem(
-                                        value: 'Over-harvesting',
-                                        child:
-                                            Text('Over-harvesting')),
-                                    DropdownMenuItem(
-                                        value: 'Land use change',
-                                        child:
-                                            Text('Land use change')),
-                                    DropdownMenuItem(
-                                        value: 'Pollution',
-                                        child: Text('Pollution')),
-                                    DropdownMenuItem(
-                                        value: 'Drought stress',
-                                        child:
-                                            Text('Drought stress')),
-                                    DropdownMenuItem(
-                                        value: 'Flooding',
-                                        child: Text('Flooding')),
-                                    DropdownMenuItem(
-                                        value: 'Fire damage',
-                                        child: Text('Fire damage')),
-                                    DropdownMenuItem(
-                                        value:
-                                            'Invasive species nearby',
-                                        child: Text(
-                                            'Invasive species nearby')),
-                                  ],
-                                  onChanged: (v) => setState(() =>
-                                      _degradationIndicator = v!),
-                                ),
-
-                                // ── 5. Observer notes ─────────────────
-                                const SizedBox(height: 20),
-                                _sectionLabel("5. Observer Notes"),
-                                const SizedBox(height: 8),
-                                CustomTextField(
-                                  label: "",
-                                  hint:
-                                      "Describe leaf condition, colour, size, surrounding vegetation...",
-                                  icon: Icons.notes,
-                                  controller: _observationController,
-                                ),
-
-                                // ── 6. Severity ───────────────────────
-                                const SizedBox(height: 20),
-                                _sectionLabel(
-                                    "6. Overall Severity (your assessment)"),
-                                const SizedBox(height: 8),
-                                CustomDropdown(
-                                  value: _severity,
-                                  items: const [
-                                    DropdownMenuItem(
-                                        value: '1',
-                                        child: Text(
-                                            '1 — No visible damage')),
-                                    DropdownMenuItem(
-                                        value: '2',
-                                        child: Text(
-                                            '2 — Minor stress')),
-                                    DropdownMenuItem(
-                                        value: '3',
-                                        child: Text(
-                                            '3 — Moderate stress')),
-                                    DropdownMenuItem(
-                                        value: '4',
-                                        child: Text(
-                                            '4 — Severe stress')),
-                                    DropdownMenuItem(
-                                        value: '5',
-                                        child: Text(
-                                            '5 — Critical / dying')),
-                                  ],
-                                  onChanged: (v) =>
-                                      setState(() => _severity = v!),
+                                Icon(Icons.info_outline,
+                                    size: 14, color: Colors.grey[600]),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    "Capture a plant image to unlock the report details below.",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
+                          ],
 
-                        if (!_isIdentified) ...[
-                          const SizedBox(height: 10),
-                          Row(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.info_outline,
-                                  size: 14, color: Colors.grey[600]),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  "Capture a plant image and confirm identification before filling in the report details.",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          const SizedBox(height: 28),
+                          _buildButtons(),
                         ],
-
-                        const SizedBox(height: 28),
-                        _buildButtons(),
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -704,35 +754,40 @@ class _AddReportScreenState extends State<AddReportScreen> {
     }
 
     if (_idState == _IDState.notIdentified) {
+      // Amber, not red — this is a routed-for-review outcome, not a
+      // dead-end failure. The researcher will assign the correct species
+      // when they approve it in ApproveReportsScreen.
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFFDECEC),
+          color: const Color(0xFFFFF3CD),
           borderRadius: BorderRadius.circular(12),
           border: const Border(
-              left: BorderSide(color: Color(0xFFE74C3C), width: 4)),
+              left: BorderSide(color: Colors.orange, width: 4)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.cancel, color: Color(0xFFE74C3C), size: 28),
+            const Icon(Icons.flag_outlined, color: Colors.orange, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Plant not identified",
+                    "Species not confirmed",
                     style: GoogleFonts.montserrat(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF9B2335),
+                      color: const Color(0xFF856404),
                     ),
                   ),
                   const SizedBox(height: 2),
                   const Text(
-                    "This image does not match Lessertia frutescens.\nTry another photo. Unidentified reports are flagged for researcher review.",
-                    style:
-                        TextStyle(fontSize: 12, color: Color(0xFF9B2335)),
+                    "This image doesn't clearly match the species register. "
+                    "You can still fill out and submit the report below — "
+                    "it will be flagged for a researcher to review and "
+                    "confirm the species before it appears in the public feed.",
+                    style: TextStyle(fontSize: 12, color: Color(0xFF856404)),
                   ),
                 ],
               ),
@@ -748,7 +803,10 @@ class _AddReportScreenState extends State<AddReportScreen> {
   // ── Buttons ──────────────────────────────────────────────────────────────
   Widget _buildButtons() {
     final bool isLoading = _idState == _IDState.loading;
-    final bool canSubmit = _isIdentified && !isLoading && !_submitting;
+    // Enabled once the pipeline has finished — identified OR notIdentified.
+    // NOT gated on _isIdentified: an unidentified report is a valid
+    // submission that gets routed to the researcher's review queue.
+    final bool canSubmit = _pipelineDone && !isLoading && !_submitting;
 
     return Column(
       children: [
@@ -765,6 +823,20 @@ class _AddReportScreenState extends State<AddReportScreen> {
             onPressed: !canSubmit
                 ? null
                 : () async {
+                    // Validate required fields (Location, Observer Notes)
+                    // before doing anything else — no image upload, no
+                    // Firestore write, no login prompt for an incomplete
+                    // form.
+                    if (!(_formKey.currentState?.validate() ?? false)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              "Please fill in all required fields before submitting."),
+                        ),
+                      );
+                      return;
+                    }
+
                     // Guests can fill out and see the whole flow, but
                     // logging in is required to actually submit.
                     if (AuthService.currentUserId == null) {
@@ -800,10 +872,18 @@ class _AddReportScreenState extends State<AddReportScreen> {
                         return;
                       }
 
+                      final bool identified = _idResult?.identified ?? false;
+
+                      // Unidentified submissions go in under a clear
+                      // placeholder name — the researcher assigns the real
+                      // species name when they approve it.
+                      final String speciesNameToSubmit = identified
+                          ? (_idResult?.species ?? "Unknown species")
+                          : kUnidentifiedSpeciesPlaceholder;
+
                       final result = await DatabaseService.submitReport(
-                        speciesName:
-                            _idResult?.species ?? "Unknown species",
-                        identified: _idResult?.identified ?? false,
+                        speciesName: speciesNameToSubmit,
+                        identified: identified,
                         confidence: _idResult?.confidence ?? 0.0,
                         healthStatus:
                             _idResult?.healthStatus ?? 'Healthy',
@@ -828,8 +908,12 @@ class _AddReportScreenState extends State<AddReportScreen> {
 
                       if (result != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Report submitted successfully"),
+                          SnackBar(
+                            content: Text(
+                              identified
+                                  ? "Report submitted successfully"
+                                  : "Report submitted — flagged for researcher review",
+                            ),
                           ),
                         );
                         context.go('/viewreports');

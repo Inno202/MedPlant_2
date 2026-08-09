@@ -355,27 +355,8 @@ const SizedBox(height: 18),
                               ],
                             ),
 
-                            const SizedBox(height: 18),
 
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.center,
-                              children: const [
-                                BadgeChip(
-                                    icon: FontAwesomeIcons.leaf,
-                                    text: "Indigenous Knowledge"),
-                                BadgeChip(
-                                    icon: FontAwesomeIcons.mobile,
-                                    text: "ICT Integration"),
-                                BadgeChip(
-                                    icon: FontAwesomeIcons.heart,
-                                    text: "Conservation"),
-                                BadgeChip(
-                                    icon: FontAwesomeIcons.users,
-                                    text: "Community Based"),
-                              ],
-                            ),
+                            
                           ],
                         ),
                       ),

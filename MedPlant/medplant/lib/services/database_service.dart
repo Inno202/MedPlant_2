@@ -1,7 +1,6 @@
 // lib/services/database_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart';
 
 class DatabaseService {
@@ -9,64 +8,60 @@ class DatabaseService {
 
   // ── Submit report ────────────────────────────────────────────────────────
   static Future<String?> submitReport({
-  required String speciesName,
-  required bool identified,
-  required double confidence,
-  required String healthStatus,
-  required String trendDirection,
-  required List<String> damageLabels,
-  required String predictionNote,
-  required String location,
-  required String environmentalCondition,
-  required String degradationIndicator,
-  required String observerNotes,
-  required String severity,
-  String? imageUrl,
-  String? gpsCoordinates,          // ← added
-}) async {
-  try {
-    final uid = AuthService.currentUserId;
-    if (uid == null) {
-      debugPrint('submitReport: no authenticated user — aborting');
+    required String speciesName,
+    required bool identified,
+    required double confidence,
+    required String healthStatus,
+    required String trendDirection,
+    required List<String> damageLabels,
+    required String predictionNote,
+    required String location,
+    required String environmentalCondition,
+    required String degradationIndicator,
+    required String observerNotes,
+    required String severity,
+    String? imageUrl,
+    String? gpsCoordinates,
+  }) async {
+    try {
+      final uid = AuthService.currentUserId;
+      if (uid == null) return null;
+
+      final bool isFlagged = !identified;
+      final String reviewStatus = identified ? 'approved' : 'pending';
+
+      final docRef = await _db.collection('plant_reports').add({
+        'submittedBy': uid,
+        'speciesName': speciesName,
+        'identified': identified,
+        'confidence': confidence,
+        'healthStatus': healthStatus,
+        'trendDirection': trendDirection,
+        'damageLabels': damageLabels,
+        'damageDetected': damageLabels.isNotEmpty,
+        'predictionNote': predictionNote,
+        'location': location,
+        'environmentalCondition': environmentalCondition,
+        'degradationIndicator': degradationIndicator,
+        'observerNotes': observerNotes,
+        'severity': severity,
+        'imageUrl': imageUrl ?? '',
+        'isFlagged': isFlagged,
+        'reviewStatus': reviewStatus,
+        'submittedAt': FieldValue.serverTimestamp(),
+        'locationArea': 'Thaba-Nchu, Free State',
+        'gpsCoordinates': gpsCoordinates ?? '',
+      });
+
+      if (identified && healthStatus == 'Stressed') {
+        await _checkAndCreateAlert(speciesName);
+      }
+
+      return docRef.id;
+    } catch (e) {
       return null;
     }
-
-    final bool isFlagged = !identified;
-    final String reviewStatus = identified ? 'approved' : 'pending';
-
-    final docRef = await _db.collection('plant_reports').add({
-      'submittedBy': uid,
-      'speciesName': speciesName,
-      'identified': identified,
-      'confidence': confidence,
-      'healthStatus': healthStatus,
-      'trendDirection': trendDirection,
-      'damageLabels': damageLabels,
-      'damageDetected': damageLabels.isNotEmpty,
-      'predictionNote': predictionNote,
-      'location': location,
-      'environmentalCondition': environmentalCondition,
-      'degradationIndicator': degradationIndicator,
-      'observerNotes': observerNotes,
-      'severity': severity,
-      'imageUrl': imageUrl ?? '',
-      'gpsCoordinates': gpsCoordinates ?? '',   // ← added
-      'isFlagged': isFlagged,
-      'reviewStatus': reviewStatus,
-      'submittedAt': FieldValue.serverTimestamp(),
-      'locationArea': 'Thaba-Nchu, Free State',
-    });
-
-    if (identified && healthStatus == 'Stressed') {
-      await _checkAndCreateAlert(speciesName);
-    }
-
-    return docRef.id;
-  } catch (e, st) {
-    debugPrint('submitReport failed: $e\n$st');   // ← now visible in console
-    return null;
   }
-}
 
   // ── Visibility helper (used everywhere) ──────────────────────────────────
   /// A document is visible in the main feed if:
@@ -109,12 +104,53 @@ class DatabaseService {
   }
 
   // ── Researcher actions ────────────────────────────────────────────────────
-  static Future<void> approveReport(String reportId) async {
-    await _db.collection('plant_reports').doc(reportId).update({
-      'isFlagged': false,
+  /// Approve a flagged report.
+  ///
+  /// [confirmedSpeciesName] is the species the researcher has identified
+  /// the plant as, entered/edited in ApproveReportsScreen. When provided
+  /// (non-null, non-empty), it overwrites whatever was stored at submission
+  /// time — including the "Unidentified — pending review" placeholder used
+  /// for reports the ML pipeline couldn't match — and flips `identified`
+  /// to true, since a human has now confirmed it.
+  ///
+  /// Also sets `reviewStatus: 'approved'`, which is the field
+  /// `isReportVisible` actually checks for feed visibility. (Previously
+  /// this method only set a `status` field, which nothing read — approved
+  /// reports never actually became visible.)
+  static Future<void> approveReport(
+    String reportId, {
+    String? confirmedSpeciesName,
+  }) async {
+    final uid = AuthService.currentUserId;
+
+    final Map<String, dynamic> updateData = {
+      'status': 'approved',
       'reviewStatus': 'approved',
-      'reviewedAt': FieldValue.serverTimestamp(),
-    });
+      'isFlagged': false,
+      'approvedAt': FieldValue.serverTimestamp(),
+      'approvedBy': uid,
+    };
+
+    final trimmedName = confirmedSpeciesName?.trim();
+    if (trimmedName != null && trimmedName.isNotEmpty) {
+      updateData['speciesName'] = trimmedName;
+      updateData['identified'] = true;
+    }
+
+    await _db.collection('plant_reports').doc(reportId).update(updateData);
+
+    // A researcher-confirmed species can itself trigger a degradation
+    // alert check, same as an auto-identified one would at submission time.
+    final doc = await _db.collection('plant_reports').doc(reportId).get();
+    final data = doc.data();
+    if (data != null && data['healthStatus'] == 'Stressed') {
+      final speciesForAlert = trimmedName?.isNotEmpty == true
+          ? trimmedName!
+          : (data['speciesName'] as String? ?? '');
+      if (speciesForAlert.isNotEmpty) {
+        await _checkAndCreateAlert(speciesForAlert);
+      }
+    }
   }
 
   static Future<void> declineReport(String reportId) async {
@@ -174,7 +210,7 @@ class DatabaseService {
   }
 
   // ── Degradation alerts ────────────────────────────────────────────────────
-static Future<void> _checkAndCreateAlert(String speciesName) async {
+  static Future<void> _checkAndCreateAlert(String speciesName) async {
     try {
       final snapshot = await _db
           .collection('plant_reports')

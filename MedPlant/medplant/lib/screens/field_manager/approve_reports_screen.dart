@@ -1,4 +1,20 @@
 // lib/screens/field_manager/approve_reports_screen.dart
+//
+// Researcher review queue for flagged (unidentified) submissions.
+//
+// KEY FIX: the ML pipeline can't confirm a species for these reports, so
+// they're stored with speciesName == "Unidentified — pending review" (see
+// kPlaceholderSpeciesNames below, mirrored from add_report_screen.dart).
+// Approving used to call DatabaseService.approveReport(docId) with no
+// species name, which never overwrote that placeholder — so approved
+// reports kept the placeholder name forever, and any downstream screen
+// that queries/joins on speciesName (predictions, species-grouped views,
+// prior-score lookups) silently never found them.
+//
+// Now the researcher must type the confirmed species name into a required
+// field before the Approve button will do anything; that name is passed
+// through as `confirmedSpeciesName` to DatabaseService.approveReport,
+// which writes it to the doc and flips `identified` to true.
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +22,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:medplant/services/database_service.dart';
 import 'package:medplant/widgets/section_header.dart';
 import '/constants/app_colors.dart';
+
+/// Species names that mean "not actually identified" — used to decide
+/// whether to prefill the confirm-species field or leave it blank.
+const List<String> kPlaceholderSpeciesNames = [
+  'Unidentified — pending review',
+  'Unknown species',
+  '',
+];
 
 class ApproveReportsScreen extends StatefulWidget {
   const ApproveReportsScreen({super.key});
@@ -18,25 +42,68 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
-  Future<void> _approve(String docId, String speciesName) async {
-    await DatabaseService.approveReport(docId);
+  // One species-name controller per report, keyed by docId, so text typed
+  // while reviewing one card survives page swipes back and forth.
+  final Map<String, TextEditingController> _speciesControllers = {};
+
+  TextEditingController _speciesControllerFor(
+      String docId, Map<String, dynamic> data) {
+    return _speciesControllers.putIfAbsent(docId, () {
+      final existing = (data['speciesName'] as String?)?.trim() ?? '';
+      final prefill = kPlaceholderSpeciesNames.contains(existing)
+          ? ''
+          : existing;
+      return TextEditingController(text: prefill);
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final c in _speciesControllers.values) {
+      c.dispose();
+    }
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _approve(
+      String docId, TextEditingController speciesController) async {
+    final speciesName = speciesController.text.trim();
+
+    if (speciesName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              "Please enter the confirmed species name before approving."),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    await DatabaseService.approveReport(docId,
+        confirmedSpeciesName: speciesName);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("✅ Approved — $speciesName added to reports feed"),
+        content: Text("Approved — $speciesName added to reports feed"),
         backgroundColor: AppColors.primary,
       ),
     );
   }
 
-  Future<void> _decline(String docId, String speciesName) async {
+  Future<void> _decline(
+      String docId, TextEditingController speciesController) async {
+    final label = speciesController.text.trim().isEmpty
+        ? "this report"
+        : speciesController.text.trim();
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Decline report?"),
         content: Text(
-          "This report for '$speciesName' will be permanently hidden. "
-          "This cannot be undone.",
+          "'$label' will be permanently hidden. This cannot be undone.",
         ),
         actions: [
           TextButton(
@@ -59,7 +126,7 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("❌ Report declined and removed from queue"),
+        content: Text("Report declined and removed from queue"),
         backgroundColor: Colors.redAccent,
       ),
     );
@@ -118,8 +185,9 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
           }
 
           final currentDoc = docs[safeIndex];
-          final currentData =
-              currentDoc.data() as Map<String, dynamic>;
+          final currentData = currentDoc.data() as Map<String, dynamic>;
+          final currentSpeciesController =
+              _speciesControllerFor(currentDoc.id, currentData);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,22 +227,21 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
                   onPageChanged: (index) =>
                       setState(() => _currentIndex = index),
                   itemBuilder: (context, index) {
-                    final data =
-                        docs[index].data() as Map<String, dynamic>;
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final controller =
+                        _speciesControllerFor(docs[index].id, data);
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child:
-                          _buildReportCard(docs[index].id, data),
+                      child: SingleChildScrollView(
+                        child: _buildReportCard(data, controller),
+                      ),
                     );
                   },
                 ),
               ),
 
               _buildDots(docs.length),
-              _buildActionButtons(
-                currentDoc.id,
-                currentData['speciesName'] ?? 'Unknown species',
-              ),
+              _buildActionButtons(currentDoc.id, currentSpeciesController),
             ],
           );
         },
@@ -218,12 +285,15 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
     );
   }
 
-  Widget _buildReportCard(String docId, Map<String, dynamic> data) {
+  // ── Report card — shell matches PlantCard/ReportCard, content stays in
+  // the boxed "textfield" style, no icons anywhere on this card. ─────────
+  Widget _buildReportCard(
+      Map<String, dynamic> data, TextEditingController speciesController) {
     final imageUrl = data['imageUrl'] ?? '';
-    final location = data['location'] ?? 'Unknown';
+    final location = data['location'] ?? 'Unknown location';
+    final gps = (data['gpsCoordinates'] as String?)?.trim() ?? '';
     final environment = data['environmentalCondition'] ?? 'Unknown';
     final notes = data['observerNotes'] ?? 'No notes';
-    final speciesName = data['speciesName'] ?? 'Unknown species';
     final confidence =
         ((data['confidence'] ?? 0.0) * 100).toStringAsFixed(0);
     final severity = data['severity'] ?? '1';
@@ -234,117 +304,152 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
         : 'Unknown date';
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderSoft),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(15, 74, 56, 0.12),
-            blurRadius: 25,
-            offset: Offset(0, 10),
+            color: Color.fromRGBO(0, 40, 20, 0.07),
+            blurRadius: 18,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Orange top strip — indicates unreviewed
-            Container(
-              height: 8,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.orange, Colors.deepOrange],
-                ),
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-            ),
-
-            // Warning banner
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 10),
-              color: const Color(0xFFFFF3CD),
-              child: const Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded,
-                      color: Colors.orange, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "ML could not identify the plant species — flagged for review",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF856404),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Image
-            if (imageUrl.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: AppColors.accentBg,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Image ─────────────────────────────────────────────────
+          ClipRRect(
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(16)),
+            child: imageUrl.isNotEmpty
+                ? Image.network(
                     imageUrl,
+                    height: 200,
+                    width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
-                      height: 150,
-                      color: AppColors.borderSoft,
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported),
+                      height: 200,
+                      color: AppColors.accentBg,
+                      alignment: Alignment.center,
+                      child: const Text(
+                        "Image unavailable",
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
                       ),
+                    ),
+                  )
+                : Container(
+                    height: 200,
+                    color: AppColors.accentBg,
+                    alignment: Alignment.center,
+                    child: const Text(
+                      "No image",
+                      style: TextStyle(
+                          fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Flag banner — text only, no icon
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3CD),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: const Text(
+                    "Flagged for review — the system could not identify this species.",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF856404),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              )
-            else
-              Container(
-                height: 120,
-                color: AppColors.accentBg,
-                child: const Center(
-                  child: Icon(Icons.camera_alt,
-                      size: 48, color: AppColors.primarySoft),
-                ),
-              ),
 
-            // Details
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _detailRow(
-                      Icons.calendar_today, "Submitted", dateStr),
-                  _detailRow(
-                      Icons.location_on, "Location", location),
-                  _detailRow(
-                      Icons.cloud, "Environment", environment),
-                  _detailRow(Icons.search, "Species suggested",
-                      "$speciesName ($confidence% conf.)"),
-                  _detailRow(Icons.warning,
-                      "Degradation indicator", indicator),
-                  _detailRow(Icons.speed,
-                      "Severity reported", "$severity / 5"),
-                  _detailRow(
-                      Icons.notes, "Observer notes", notes),
-                ],
-              ),
+                const SizedBox(height: 14),
+
+                // ── Required, editable species assignment ────────────
+                _speciesNameField(speciesController),
+
+                // ── Read-only details, boxed "textfield" style ────────
+                _detailRow("Location", location),
+                _detailRow(
+                    "GPS Coordinates", gps.isEmpty ? "Not captured" : gps),
+                _detailRow("Environmental Condition", environment),
+                _detailRow("Degradation Indicator", indicator),
+                _detailRow("Severity Reported", "$severity / 5"),
+                _detailRow("Observer Notes", notes),
+                _detailRow("Submitted", dateStr),
+                _detailRow(
+                    "ML Confidence", "$confidence% — species not confirmed"),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value) {
+  Widget _speciesNameField(TextEditingController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary, width: 1.5),
+        boxShadow: const [
+          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.03), blurRadius: 6),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "CONFIRM SPECIES NAME *",
+            style: TextStyle(
+              fontSize: 10,
+              letterSpacing: 0.8,
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          TextFormField(
+            controller: controller,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryDark,
+            ),
+            decoration: const InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              hintText: "e.g. Lessertia frutescens",
+              hintStyle: TextStyle(
+                fontWeight: FontWeight.normal,
+                color: Colors.grey,
+              ),
+              contentPadding: EdgeInsets.symmetric(vertical: 6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -357,32 +462,22 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
               color: Color.fromRGBO(0, 0, 0, 0.03), blurRadius: 6),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.primary, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 0.8,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500)),
-              ],
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 10,
+              letterSpacing: 0.8,
+              color: Colors.grey,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(height: 3),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -412,51 +507,57 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
     );
   }
 
-  Widget _buildActionButtons(String docId, String speciesName) {
+  // ── Approve / Decline — stacked full-width, matching the primary/
+  // outlined button layout used on LoginScreen and RegisterScreen. ───────
+  Widget _buildActionButtons(
+      String docId, TextEditingController speciesController) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border:
-            Border(top: BorderSide(color: AppColors.borderSoft)),
+        border: Border(top: BorderSide(color: AppColors.borderSoft)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 14),
-                side: const BorderSide(color: Colors.red, width: 2),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryDark,
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(40)),
+                    borderRadius: BorderRadius.circular(50)),
               ),
-              onPressed: () => _decline(docId, speciesName),
-              icon: const Icon(Icons.close,
-                  color: Colors.red, size: 18),
-              label: const Text("Decline",
-                  style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold)),
+              onPressed: () => _approve(docId, speciesController),
+              child: Text(
+                "Approve",
+                style: GoogleFonts.lato(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: AppColors.primary,
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: const BorderSide(color: Colors.red, width: 2),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(40)),
+                    borderRadius: BorderRadius.circular(50)),
               ),
-              onPressed: () => _approve(docId, speciesName),
-              icon: const Icon(Icons.check,
-                  color: Colors.white, size: 18),
-              label: const Text("Approve",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+              onPressed: () => _decline(docId, speciesController),
+              child: Text(
+                "Decline",
+                style: GoogleFonts.lato(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
           ),
         ],
