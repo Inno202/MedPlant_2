@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../models/user_role.dart';
+import '../services/auth_service.dart';
 
 class UserProvider extends ChangeNotifier {
   UserRole? _role;
@@ -11,9 +12,12 @@ class UserProvider extends ChangeNotifier {
   String? _username;
   String? _email;
 
+  bool _restoring = true;
+
   // Getters
   UserRole? get role => _role;
   bool get isLoggedIn => _isLoggedIn;
+  bool get isRestoring => _restoring;
 
   String? get uid => _uid;
   String? get username => _username;
@@ -21,6 +25,33 @@ class UserProvider extends ChangeNotifier {
 
   bool get isCommunityUser => _role == UserRole.communityUser;
   bool get isResearcher => _role == UserRole.researcher;
+
+  UserProvider() {
+    _restoreSession();
+  }
+
+  // ── Restore session from Firebase on app start ───────────────────────────
+  Future<void> _restoreSession() async {
+    final firebaseUser = AuthService.currentUser;
+    if (firebaseUser != null) {
+      final profile = await AuthService.getUserProfile(firebaseUser.uid);
+      if (profile != null) {
+        final roleStr = profile['role'] ?? 'communityUser';
+        final role = switch (roleStr) {
+          'researcher' => UserRole.researcher,
+          _ => UserRole.communityUser,
+        };
+        loginWithDetails(
+          role: role,
+          uid: firebaseUser.uid,
+          username: profile['username'] ?? '',
+          email: profile['email'] ?? '',
+        );
+      }
+    }
+    _restoring = false;
+    notifyListeners();
+  }
 
   // Basic login
   void login(UserRole role) {

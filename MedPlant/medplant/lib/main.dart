@@ -30,6 +30,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
+if (userProvider.isRestoring) {
+  return const MaterialApp(
+    home: Scaffold(body: Center(child: CircularProgressIndicator())),
+  );
+}
     final navProvider = Provider.of<NavigationProvider>(context);
     navProvider.configureRoutes(userProvider.role);
 
