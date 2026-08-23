@@ -223,7 +223,7 @@ class PlantIdentifier:
 
         return True
 
-    def predict_plant(self, image, confidence_threshold=0.70):
+    def predict_plant(self, image, confidence_threshold=0.80):
 
         try:
 

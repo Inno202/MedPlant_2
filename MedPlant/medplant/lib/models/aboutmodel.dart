@@ -57,7 +57,6 @@ final AboutModel dummyAbout = AboutModel(
       "The platform is designed to be user-friendly and accessible to a wide range of users, including field managers, researchers, and the general public. By leveraging indigenous knowledge and ICT tools, MedPlants seeks to empower communities to take an active role in the conservation and sustainable use of medicinal plants.",
 
   extraText:
-      "MedPlants is a collaborative effort that brings together experts in the fields of botany, ecology, and information technology. The platform is continuously being developed and improved to better serve the needs of its users and to contribute to the conservation of medicinal plants.\n\nThis project is part of the MedPlant initiative. For more information about the MedPlant platform and its features, please visit the MedPlant website.",
-
+      "MedPlants is a collaborative effort that brings together experts in the fields of botany, ecology, and information technology. The platform is continuously being developed and improved to better serve the needs of its users and to contribute to the conservation of medicinal plants.",
   itikiLink: "https://medplant.africa/",
 );

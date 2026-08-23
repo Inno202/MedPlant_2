@@ -93,8 +93,8 @@ class UserHomeScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 16),
-              const InfoGrid(),
-              const SizedBox(height: 16),
+              // const InfoGrid(),
+              // const SizedBox(height: 16),
               if (!isLoggedIn) const AuthCTASection(),
               const SizedBox(height: 16),
               const BadgeRow(),

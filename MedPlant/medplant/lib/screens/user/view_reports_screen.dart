@@ -26,7 +26,7 @@ class ViewReportsScreen extends StatelessWidget {
         case UserRole.communityUser:
           return "Add New";
         case UserRole.researcher:
-          return "Pending Reports";
+          return "Manage Reports";
         default:
           return null;
       }
@@ -36,10 +36,8 @@ class ViewReportsScreen extends StatelessWidget {
       switch (role) {
         case UserRole.communityUser:
           context.go('/addreport');
-          break;
-        case UserRole.researcher:
+          case UserRole.researcher:
           context.go('/approvereports');
-          break;
         default:
           break;
       }

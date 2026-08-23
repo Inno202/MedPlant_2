@@ -135,33 +135,33 @@ class AboutScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // ITIKI link button
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () {
-                        // TODO: launch URL using url_launcher
-                      },
-                      icon: const FaIcon(
-                        FontAwesomeIcons.arrowRight,
-                        size: 14,
-                        color: AppColors.white,
-                      ),
-                      label: Text(
-                        'Discover Medplant',
-                        style: GoogleFonts.lato(
-                          color: AppColors.white,
+                  // Align(
+                  //   alignment: Alignment.centerLeft,
+                  //   child: TextButton.icon(
+                  //     onPressed: () {
+                  //       // TODO: launch URL using url_launcher
+                  //     },
+                  //     icon: const FaIcon(
+                  //       FontAwesomeIcons.arrowRight,
+                  //       size: 14,
+                  //       color: AppColors.white,
+                  //     ),
+                  //     label: Text(
+                  //       'Discover Medplant',
+                  //       style: GoogleFonts.lato(
+                  //         color: AppColors.white,
                         
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppColors.primaryDark,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(40)),
-                      ),
-                    ),
-                  ),
+                  //       ),
+                  //     ),
+                  //     style: TextButton.styleFrom(
+                  //       backgroundColor: AppColors.primaryDark,
+                  //       padding: const EdgeInsets.symmetric(
+                  //           horizontal: 20, vertical: 12),
+                  //       shape: RoundedRectangleBorder(
+                  //           borderRadius: BorderRadius.circular(40)),
+                  //     ),
+                  //   ),
+                  // ),
                   const SizedBox(height: 20),
 
                   // badges row

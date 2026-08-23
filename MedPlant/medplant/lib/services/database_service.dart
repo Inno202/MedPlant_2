@@ -97,10 +97,62 @@ class DatabaseService {
   // Single-field query only — no composite index needed.
   // The UI sorts client-side if ordering matters.
   static Stream<QuerySnapshot> getPendingFlaggedReportsStream() {
+    return getReportsByReviewStatusStream('pending');
+  }
+
+  static Stream<QuerySnapshot> getReportsByReviewStatusStream(String status) {
     return _db
         .collection('plant_reports')
-        .where('reviewStatus', isEqualTo: 'pending')
+        .where('reviewStatus', isEqualTo: status)
         .snapshots();
+  }
+
+  /// Same idea as [getReportsByReviewStatusStream], but for 'approved' it
+  /// ALSO includes legacy documents that have NO reviewStatus field at all.
+  ///
+  /// Those legacy docs are treated as approved everywhere else in the app
+  /// (see [isReportVisible]), but a plain
+  /// `.where('reviewStatus', isEqualTo: 'approved')` can never match a
+  /// missing field — Firestore has no "field does not exist" operator you
+  /// can OR into that query. Without this, any report submitted before the
+  /// reviewStatus field existed silently disappears from every tab on
+  /// ApproveReportsScreen (though it still shows correctly on the main
+  /// ViewReportsScreen feed, since that screen filters with
+  /// isReportVisible instead).
+  ///
+  /// For 'pending' and 'declined' this behaves exactly like
+  /// [getReportsByReviewStatusStream] — legacy docs are only ever treated
+  /// as approved, never as pending/declined.
+  static Stream<List<QueryDocumentSnapshot>> getReviewTabDocsStream(
+      String status) {
+    if (status != 'approved') {
+      return getReportsByReviewStatusStream(status).map((snap) => snap.docs);
+    }
+
+    final explicit = _db
+        .collection('plant_reports')
+        .where('reviewStatus', isEqualTo: 'approved')
+        .snapshots();
+
+    // No "field does not exist" query in Firestore, so pull everything and
+    // filter client-side for the legacy (missing-field) case. Fine at this
+    // project's current scale; revisit with a stored boolean flag
+    // (e.g. isLegacyApproved) if plant_reports grows significantly.
+    final all = _db.collection('plant_reports').snapshots();
+
+    return explicit.asyncMap((explicitSnap) async {
+      final allSnap = await all.first;
+      final legacyDocs = allSnap.docs
+          .where((d) => (d.data() as Map<String, dynamic>)['reviewStatus'] == null)
+          .toList();
+
+      final seen = <String>{};
+      final merged = <QueryDocumentSnapshot>[];
+      for (final d in [...explicitSnap.docs, ...legacyDocs]) {
+        if (seen.add(d.id)) merged.add(d);
+      }
+      return merged;
+    });
   }
 
   // ── Researcher actions ────────────────────────────────────────────────────
@@ -262,6 +314,19 @@ class DatabaseService {
     await _db.collection('degradation_alerts').doc(alertId).update({
       'notificationStatus': 'Acknowledged',
     });
+  }
+
+  static Future<int> recheckAllAlerts() async {
+    final speciesSnapshot = await _db.collection('species').get();
+    int checked = 0;
+    for (final doc in speciesSnapshot.docs) {
+      final name = doc.data()['name'] as String?;
+      if (name != null && name.isNotEmpty) {
+        await _checkAndCreateAlert(name);
+        checked++;
+      }
+    }
+    return checked;
   }
 
   // ── Dashboard stats ───────────────────────────────────────────────────────

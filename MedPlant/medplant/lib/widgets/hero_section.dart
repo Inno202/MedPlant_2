@@ -2,6 +2,7 @@
 // Aligned with research proposal — Thaba-Nchu medicinal plant monitoring context
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
@@ -56,15 +57,15 @@ class HeroSection extends StatelessWidget {
               const SizedBox(height: 10),
 
               // Three quick-stat badges
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  _badge(Icons.eco, "1 Species Registered"),
-                  _badge(Icons.camera_alt, "7 Community Reports"),
-                  _badge(Icons.warning_amber, "2 Active Alerts"),
-                ],
-              ),
+              // Wrap(
+              //   spacing: 8,
+              //   runSpacing: 6,
+              //   children: [
+              //     _badge(Icons.eco, "1 Species Registered"),
+              //     _badge(Icons.camera_alt, "7 Community Reports"),
+              //     _badge(Icons.warning_amber, "2 Active Alerts"),
+              //   ],
+              // ),
 
               const SizedBox(height: 14),
 
@@ -77,7 +78,7 @@ class HeroSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                 ),
-                onPressed: () {},
+                onPressed: () { context.go('/about'); },
                 child: Text(
                   "Learn More",
                   style: GoogleFonts.montserrat(

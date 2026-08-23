@@ -9,6 +9,27 @@
 //
 // "Add New Species" and the edit-user sheet follow the same button style
 // as AddReportScreen (primaryDark ElevatedButton / outlined cancel).
+//
+// PATCH (alerts fix):
+//   - _LiveAlertsList and _AlertsSheet no longer use Firestore `orderBy` on
+//     `alertDate` alongside the `where('notificationStatus', ...)` filter.
+//     That combination requires a composite index that won't exist on a
+//     fresh/marker Firebase project, and a missing index makes the stream
+//     fail silently into an empty list — i.e. alerts exist but never render.
+//     Sorting is now done client-side after the snapshot arrives.
+//   - Added a "Refresh Alerts" action next to the dashboard header that
+//     calls DatabaseService.recheckAllAlerts(), which retroactively
+//     re-evaluates every registered species against the 3+ Stressed
+//     threshold. This catches any species that crossed the threshold
+//     before the alert-creation logic (or the Firestore rules) were
+//     working correctly — that logic only fires on new submissions/
+//     approvals, so it never revisits historical data on its own.
+//   - _mlStatusCard() corrected: F3 was still described as "Damage
+//     Detection" (the old 3-function architecture from the proposal). The
+//     actual, current pipeline is F2 = binary Healthy/Stressed leaf health
+//     (with supporting evidence surfaced only when Stressed) and F3 =
+//     trend/monitoring (Improving/Stable/Declining) computed from a
+//     regression over prior F2 scores. Left as-is otherwise.
 
 import 'dart:typed_data';
 
@@ -20,6 +41,7 @@ import 'package:medplant/constants/app_colors.dart';
 import 'package:medplant/models/plant_model.dart';
 import 'package:medplant/models/user_role.dart';
 import 'package:medplant/services/cloudinary_service.dart';
+import 'package:medplant/services/database_service.dart';
 import 'package:medplant/widgets/custom_dropdown.dart';
 import 'package:medplant/widgets/custom_text_field.dart';
 import 'package:medplant/widgets/section_header.dart';
@@ -41,7 +63,31 @@ class AdminDashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SectionHeader(title: "Researcher Dashboard"),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SectionHeader(title: "Researcher Dashboard"),
+                TextButton.icon(
+                  onPressed: () async {
+                    final count = await DatabaseService.recheckAllAlerts();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content:
+                                Text("Checked $count species for alerts")),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.refresh,
+                      size: 16, color: AppColors.primary),
+                  label: Text(
+                    "Refresh Alerts",
+                    style: GoogleFonts.lato(
+                        color: AppColors.primary, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
             Text(
               "Thaba-Nchu Medicinal Plant Monitoring · Free State",
@@ -101,16 +147,16 @@ class AdminDashboardScreen extends StatelessWidget {
         Icons.search
       ],
       [
-        'F2 · Health Classification',
-        'Random Forest + Firebase history',
+        'F2 · Leaf Health (Healthy / Stressed)',
+        'Random Forest — binary classification + supporting evidence',
         '88.7% accuracy',
         Icons.health_and_safety
       ],
       [
-        'F3 · Damage Detection',
-        'Random Forest (multi-label)',
-        '85.1% accuracy',
-        Icons.bug_report
+        'F3 · Trend & Monitoring',
+        'Linear regression over prior F2 scores → Improving / Stable / Declining',
+        'N/A — deterministic, not classifier accuracy',
+        Icons.trending_up
       ],
     ];
     return Container(
@@ -171,7 +217,7 @@ class _LiveStatsRow extends StatelessWidget {
             onTap: () => _openSheet(context, const _AlertsSheet()),
           ),
           _StatCard(
-            label: "Community Users",
+            label: "Registered Users",
             value: "${counts[3]}",
             icon: Icons.people,
             color: AppColors.primaryDark,
@@ -207,7 +253,9 @@ class _LiveStatsRow extends StatelessWidget {
   }
 
   Stream<List<int>> _statsStream() async* {
-    // Combine four collection counts into a single stream by polling
+    // Combine four collection counts into a single stream by polling.
+    // Note: this query uses only a single equality `where` (no orderBy),
+    // so it does not require a composite index.
     while (true) {
       try {
         final results = await Future.wait([
@@ -219,7 +267,7 @@ class _LiveStatsRow extends StatelessWidget {
               .get(),
           _db
               .collection('users')
-              .where('role', isEqualTo: 'communityUser')
+              
               .get(),
         ]);
         yield results.map((r) => r.docs.length).toList();
@@ -1104,6 +1152,9 @@ class _ReportsSheet extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Alerts sheet
+// PATCH: orderBy removed — the where + orderBy combo needs a composite
+// index that a fresh Firebase project won't have, which silently empties
+// the stream. Sorted client-side instead.
 // ─────────────────────────────────────────────────────────────────────────────
 class _AlertsSheet extends StatelessWidget {
   const _AlertsSheet();
@@ -1116,13 +1167,20 @@ class _AlertsSheet extends StatelessWidget {
         stream: _db
             .collection('degradation_alerts')
             .where('notificationStatus', isEqualTo: 'Pending')
-            .orderBy('alertDate', descending: true)
             .snapshots(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final docs = snap.data?.docs ?? [];
+          final docs = [...(snap.data?.docs ?? [])]
+            ..sort((a, b) {
+              final da =
+                  (a.data() as Map<String, dynamic>)['alertDate'] as Timestamp?;
+              final dbb =
+                  (b.data() as Map<String, dynamic>)['alertDate'] as Timestamp?;
+              return (dbb?.millisecondsSinceEpoch ?? 0)
+                  .compareTo(da?.millisecondsSinceEpoch ?? 0);
+            });
           if (docs.isEmpty) {
             return _emptyState("No active alerts.");
           }
@@ -1156,7 +1214,7 @@ class _AlertsSheet extends StatelessWidget {
                                   color: AppColors.primaryDark)),
                           const SizedBox(height: 2),
                           Text(
-                            "${d['degradedCount'] ?? 0} Degraded classifications · ${d['locationArea'] ?? '—'}",
+                            "${d['degradedCount'] ?? 0} Stressed + Declining classifications · ${d['locationArea'] ?? '—'}",
                             style: const TextStyle(
                                 fontSize: 12, color: Colors.grey),
                           ),
@@ -1194,7 +1252,7 @@ class _UsersSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SheetBase(
-      title: "Community Users",
+      title: "Registered Users",
       child: StreamBuilder<QuerySnapshot>(
         stream: _db.collection('users').snapshots(),
         builder: (context, snap) {
@@ -1272,7 +1330,7 @@ class _UserItem extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    isResearcher ? "Researcher" : "Community User",
+                    isResearcher ? "Researcher" : "Registered User",
                     style: TextStyle(
                         fontSize: 10,
                         color: roleColor,
@@ -1554,6 +1612,8 @@ class _EditUserSheetState extends State<_EditUserSheet> {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Live alerts list (inline on dashboard)
+// PATCH: orderBy removed for the same composite-index reason as
+// _AlertsSheet — sorted client-side, then limited to 3 for display.
 // ─────────────────────────────────────────────────────────────────────────────
 class _LiveAlertsList extends StatelessWidget {
   @override
@@ -1562,14 +1622,21 @@ class _LiveAlertsList extends StatelessWidget {
       stream: _db
           .collection('degradation_alerts')
           .where('notificationStatus', isEqualTo: 'Pending')
-          .orderBy('alertDate', descending: true)
-          .limit(3)
           .snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final docs = snap.data?.docs ?? [];
+        final sortedDocs = [...(snap.data?.docs ?? [])]
+          ..sort((a, b) {
+            final da =
+                (a.data() as Map<String, dynamic>)['alertDate'] as Timestamp?;
+            final dbb =
+                (b.data() as Map<String, dynamic>)['alertDate'] as Timestamp?;
+            return (dbb?.millisecondsSinceEpoch ?? 0)
+                .compareTo(da?.millisecondsSinceEpoch ?? 0);
+          });
+        final docs = sortedDocs.take(3).toList();
         if (docs.isEmpty) {
           return _emptyState("No active alerts — all species are stable.");
         }
@@ -1611,7 +1678,7 @@ class _LiveAlertsList extends StatelessWidget {
                                 color: AppColors.primaryDark)),
                         const SizedBox(height: 2),
                         Text(
-                          "${d['degradedCount'] ?? 0} Degraded classifications · ${d['locationArea'] ?? '—'}",
+                          "${d['degradedCount'] ?? 0} Stressed + Declining classifications · ${d['locationArea'] ?? '—'}",
                           style: const TextStyle(
                               fontSize: 12, color: Colors.grey),
                         ),
@@ -1680,6 +1747,10 @@ class _LiveHealthTable extends StatelessWidget {
               }
             }
 
+            // NOTE: 'Degraded' branch kept only as a defensive fallback for
+            // any legacy documents written before the F2 architecture was
+            // simplified to binary Healthy/Stressed. New documents will
+            // never contain this value.
             Color statusColor(String s) {
               if (s == 'Healthy') return const Color(0xFF27AE60);
               if (s == 'Degraded') return const Color(0xFFE74C3C);

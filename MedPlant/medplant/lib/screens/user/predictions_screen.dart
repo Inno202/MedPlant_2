@@ -417,7 +417,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         Expanded(
           child: Text(
             _serverOnline
-                ? "ML server online · F2 (binary health) + F3 (trend) active"
+                ? "ML server online · Leaf health Classification + Trend Analysis active"
                 : "ML server offline · Analyses will be skipped — start uvicorn on port 8000",
             style: TextStyle(
               fontSize: 12,
@@ -485,7 +485,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    "⚠ $_alertCount alert(s)",
+                    "$_alertCount alert(s)",
                     style: const TextStyle(
                       fontSize: 10,
                       color: Color(0xFFE74C3C),
@@ -536,7 +536,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
               ]),
               const SizedBox(height: 4),
               Text(
-                "F2 health · F3 trend",
+                "Leaf health · Trend",
                 style: TextStyle(
                     fontSize: 11, color: AppColors.textSecondary),
               ),
@@ -568,7 +568,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(
-          "F2 · Leaf Health Distribution",
+          "Leaf Health Distribution",
           style: GoogleFonts.montserrat(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -604,7 +604,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
 
           const SizedBox(height: 16),
           Text(
-            "F3 · Trend Breakdown",
+            "Trend Breakdown",
             style: GoogleFonts.montserrat(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -643,15 +643,14 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     } else if (trend == 'Declining') {
       text =
           "Overall population signal is DECLINING. $stressed of $total reports "
-          "classify as Stressed (F2), with $declining submission(s) showing a "
-          "worsening trajectory (F3). Researcher notification is recommended "
+          "classify as Stressed, with $declining submission(s) showing a "
+          "worsening trajectory. Researcher notification is recommended "
           "once this species accumulates repeated Stressed + Declining reports. "
-          "This aligns with documented over-harvesting pressure in the Free "
-          "State (Vukeya et al., 2024).";
+          ;
     } else {
       text =
           "Population appears STABLE. $healthy of $total reports classify as "
-          "Healthy (F2), and the F3 trend across recent submissions is not "
+          "Healthy, and the trend across recent submissions is not "
           "declining. Continue routine monthly monitoring as per the study "
           "protocol. No immediate researcher escalation required.";
     }
@@ -682,7 +681,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2)),
             SizedBox(width: 10),
-            Text("Running F2 (leaf health) + F3 (trend) analysis…",
+            Text("Running leaf health + trend analysis…",
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ]),
         ),
@@ -732,23 +731,23 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
           const Spacer(),
           // Monitoring priority badge — researcher follow-up urgency,
           // separate from the F2 Healthy/Stressed call.
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: _riskColor(a.riskLevel).withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: _riskColor(a.riskLevel).withOpacity(0.4)),
-            ),
-            child: Text(
-              "${a.riskLevel} Priority · ${a.alertScore}/10",
-              style: TextStyle(
-                  fontSize: 10,
-                  color: _riskColor(a.riskLevel),
-                  fontWeight: FontWeight.bold),
-            ),
-          ),
+          // Container(
+          //   padding:
+          //       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          //   decoration: BoxDecoration(
+          //     color: _riskColor(a.riskLevel).withOpacity(0.12),
+          //     borderRadius: BorderRadius.circular(12),
+          //     border: Border.all(
+          //         color: _riskColor(a.riskLevel).withOpacity(0.4)),
+          //   ),
+          //   child: Text(
+          //     "${a.riskLevel} Priority · ${a.alertScore}/10",
+          //     style: TextStyle(
+          //         fontSize: 10,
+          //         color: _riskColor(a.riskLevel),
+          //         fontWeight: FontWeight.bold),
+          //   ),
+          // ),
         ]),
 
         const SizedBox(height: 8),

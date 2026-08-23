@@ -308,15 +308,15 @@ def _build_contextual_result(
     loc_str = f" in {location}" if location.strip() else " in Thaba-Nchu"
     parts = [
         f"Leaf health assessment of Lessertia frutescens (Cancer Bush){loc_str} "
-        f"(F2 binary classification + F3 trend · {prior_count} prior submission(s)).",
+        f"(leaf health classification + trend · {prior_count} prior submission(s)).",
         "",
-        f"F2: {health_status.upper()} ({confidence:.0%} confidence, health score "
-        f"{health_score:.2f}/1.0, reported severity {sev_int}/5). F3 trend: {trend}.",
+        f"Leaf health: {health_status.upper()} ({confidence:.0%} confidence, health score "
+        f"{health_score:.2f}/1.0, reported severity {sev_int}/5). trend: {trend}.",
     ]
     if environmental_condition not in ("Normal",):
         parts.append(
             f"The {environmental_condition} environmental conditions at time of observation "
-            "are a known stressor for this species and were factored into F2's assessment."
+            "are a known stressor for this species and were factored into leaf health assessment."
         )
     if evidence:
         parts.append(f"Supporting evidence for the Stressed call: {', '.join(evidence)}.")
@@ -327,14 +327,14 @@ def _build_contextual_result(
     if observer_notes.strip():
         parts.append(
             f"Observer noted: \"{observer_notes[:200]}\". "
-            "This IK contribution has been recorded in alignment with the study methodology."
+            # "This IK contribution has been recorded in alignment with the study methodology."
         )
     parts.append(
         f"Monitoring priority: {risk_level.upper()} (score {alert_score}/10). "
         "This reflects follow-up urgency for this submission — it does not itself "
         "constitute a species-level degradation finding; that determination is made "
         "separately once a species accumulates repeated Stressed + Declining reports "
-        "(see researcher degradation alerts)."
+        # "(see researcher degradation alerts)."
     )
     comprehensive_report = " ".join(parts)
 
@@ -342,8 +342,8 @@ def _build_contextual_result(
     recs: list[str] = []
     if health_status == STRESSED and (trend == DECLINING or alert_score >= 7):
         recs.append(
-            "Flag for researcher follow-up — high monitoring priority based on the F2 "
-            "classification and F3 declining trend, combined with environmental and "
+            "Flag for researcher follow-up — high monitoring priority based on the leaf health "
+            "classification and trend declining trend, combined with environmental and "
             "observer-reported signals."
         )
     if "Over-harvesting signs reported" in evidence or degradation_indicator == "Over-harvesting":
