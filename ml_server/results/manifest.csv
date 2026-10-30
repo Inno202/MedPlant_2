@@ -1,0 +1,465 @@
+filename,split,label,y,source,size_kb,group,height,width
+Lessertia_Frutescens_2026-05-15_15_35_11_0072.jpeg,train,Healthy,0,field,352.0615234375,0,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_12_0073.jpeg,train,Healthy,0,field,336.0859375,1,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_13_0074.jpeg,train,Healthy,0,field,333.2509765625,2,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_15_0075.jpeg,train,Healthy,0,field,334.0556640625,3,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_17_0076.jpeg,train,Healthy,0,field,335.7841796875,4,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_18_0077.jpeg,train,Healthy,0,field,338.33984375,5,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_20_0078.jpeg,train,Healthy,0,field,341.990234375,6,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_21_0079.jpeg,train,Healthy,0,field,346.2890625,7,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_22_0080.jpeg,train,Healthy,0,field,344.4970703125,8,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_23_0081.jpeg,train,Healthy,0,field,343.39453125,9,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_25_0082.jpeg,train,Healthy,0,field,344.765625,10,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_26_0083.jpeg,train,Healthy,0,field,342.345703125,11,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_28_0084.jpeg,train,Healthy,0,field,338.2021484375,12,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_30_0085.jpeg,train,Healthy,0,field,330.3486328125,13,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_32_0086.jpeg,train,Healthy,0,field,332.42578125,14,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_33_0087.jpeg,train,Healthy,0,field,340.568359375,15,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_34_0088.jpeg,train,Healthy,0,field,335.708984375,16,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_36_0089.jpeg,train,Healthy,0,field,339.392578125,17,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_37_0090.jpeg,train,Healthy,0,field,368.9931640625,18,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_38_0091.jpeg,train,Healthy,0,field,379.2197265625,19,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_39_0092.jpeg,train,Healthy,0,field,380.5791015625,20,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_40_0093.jpeg,train,Healthy,0,field,382.298828125,21,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_41_0094.jpeg,train,Healthy,0,field,381.3271484375,22,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_43_0095.jpeg,train,Healthy,0,field,382.126953125,23,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_44_0096.jpeg,train,Healthy,0,field,379.609375,24,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_45_0097.jpeg,train,Healthy,0,field,380.5869140625,25,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_47_0098.jpeg,train,Healthy,0,field,381.072265625,26,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_48_0099.jpeg,train,Healthy,0,field,383.5478515625,27,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_49_0100.jpeg,train,Healthy,0,field,384.794921875,28,1280,960
+Lessertia_Frutescens_2026-05-19_09_09_0101.jpeg,train,Healthy,0,field,267.8466796875,29,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_0104.jpeg,train,Healthy,0,field,268.115234375,30,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_0106.jpeg,train,Healthy,0,field,267.34375,31,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_0108.jpeg,train,Healthy,0,field,271.9951171875,32,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_01_0102.jpeg,train,Healthy,0,field,266.908203125,33,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_02_0103.jpeg,train,Healthy,0,field,265.59765625,34,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_03_0105.jpeg,train,Healthy,0,field,273.6591796875,35,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_04_0107.jpeg,train,Healthy,0,field,268.2001953125,36,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_05_0109.jpeg,train,Healthy,0,field,270.994140625,37,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_06_0110.jpeg,train,Healthy,0,field,268.38671875,38,720,1600
+Lessertia_Frutescens_2026-05-19_09_09_37_0111.jpeg,train,Healthy,0,field,198.9853515625,39,576,1280
+Lessertia_Frutescens_2026-05-19_09_09_38_0112.jpeg,train,Healthy,0,field,199.986328125,40,576,1280
+Lessertia_Frutescens_2026-05-19_09_09_39_0113.jpeg,train,Healthy,0,field,199.619140625,41,576,1280
+Lessertia_Frutescens_2026-05-19_09_09_40_0114.jpeg,train,Healthy,0,field,199.0126953125,42,576,1280
+Lessertia_Frutescens_2026-05-19_09_09_42_0115.jpeg,train,Healthy,0,field,199.6083984375,43,576,1280
+Lessertia_Frutescens_2026-05-19_09_09_44_0116.jpeg,train,Healthy,0,field,199.6650390625,44,576,1280
+Lessertia_Frutescens_2026-05-19_09_09_45_0117.jpeg,train,Healthy,0,field,200.033203125,45,576,1280
+Lessertia_Frutescens_2026-05-19_09_09_47_0118.jpeg,train,Healthy,0,field,198.7197265625,46,576,1280
+Lessertia_Frutescens_2026-05-19_09_09_57_0119.jpeg,train,Healthy,0,field,199.185546875,47,576,1280
+Lessertia_Frutescens_2026-05-19_09_10_02_0120.jpeg,train,Healthy,0,field,198.7275390625,48,576,1280
+Lessertia_Frutescens_2026-05-19_09_10_23_0121.jpeg,train,Healthy,0,field,199.28515625,49,576,1280
+Lessertia_Frutescens_2026-05-19_09_13_0122.jpeg,train,Healthy,0,field,198.123046875,50,576,1280
+Lessertia_Frutescens_2026-05-19_09_13_0124.jpeg,train,Healthy,0,field,207.71484375,51,1280,576
+Lessertia_Frutescens_2026-05-19_09_13_0129.jpeg,train,Healthy,0,field,207.3447265625,62,1280,576
+Lessertia_Frutescens_2026-05-19_09_13_54_0123.jpeg,train,Healthy,0,field,198.8046875,53,576,1280
+Lessertia_Frutescens_2026-05-19_09_13_55_0125.jpeg,train,Healthy,0,field,199.724609375,54,576,1280
+Lessertia_Frutescens_2026-05-19_09_13_56_0126.jpeg,train,Healthy,0,field,207.7060546875,55,1280,576
+Lessertia_Frutescens_2026-05-19_09_13_57_0127.jpeg,train,Healthy,0,field,207.4423828125,56,1280,576
+Lessertia_Frutescens_2026-05-19_09_13_58_0128.jpeg,train,Healthy,0,field,207.4365234375,56,1280,576
+Lessertia_Frutescens_2026-05-19_09_13_59_0130.jpeg,train,Healthy,0,field,207.2568359375,62,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_00_0132.jpeg,train,Healthy,0,field,207.4541015625,62,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0131.jpeg,train,Healthy,0,field,207.6181640625,62,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0133.jpeg,train,Healthy,0,field,207.65625,62,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0135.jpeg,train,Healthy,0,field,207.4853515625,62,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0137.jpeg,train,Healthy,0,field,207.779296875,63,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0140.jpeg,train,Healthy,0,field,207.71875,64,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0143.jpeg,train,Healthy,0,field,193.89453125,100,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0145.jpeg,train,Healthy,0,field,195.4267578125,100,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0147.jpeg,train,Healthy,0,field,195.5,67,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0149.jpeg,train,Healthy,0,field,182.0224609375,68,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0154.jpeg,train,Healthy,0,field,184.8369140625,69,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0157.jpeg,train,Healthy,0,field,185.6181640625,70,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0159.jpeg,train,Healthy,0,field,191.068359375,71,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0161.jpeg,train,Healthy,0,field,192.330078125,72,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0163.jpeg,train,Healthy,0,field,195.697265625,73,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0165.jpeg,train,Healthy,0,field,191.681640625,74,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0166.jpeg,train,Healthy,0,field,192.3193359375,75,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0168.jpeg,train,Healthy,0,field,193.3427734375,76,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0171.jpeg,train,Healthy,0,field,186.947265625,77,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0172.jpeg,train,Healthy,0,field,193.3798828125,78,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0175.jpeg,train,Healthy,0,field,193.4140625,79,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0177.jpeg,train,Healthy,0,field,193.673828125,80,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0181.jpeg,train,Healthy,0,field,187.25390625,81,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0184.jpeg,train,Healthy,0,field,173.0302734375,82,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0186.jpeg,train,Healthy,0,field,181.9482421875,83,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0188.jpeg,train,Healthy,0,field,165.5615234375,84,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0190.jpeg,train,Healthy,0,field,177.833984375,85,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0191.jpeg,train,Healthy,0,field,175.978515625,86,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0195.jpeg,train,Healthy,0,field,166.91796875,87,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0198.jpeg,train,Healthy,0,field,181.837890625,88,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_01_0134.jpeg,train,Healthy,0,field,207.8193359375,89,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0200.jpeg,train,Healthy,0,field,183.435546875,90,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0206.jpeg,train,Healthy,0,field,182.2802734375,91,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0208.jpeg,train,Healthy,0,field,190.544921875,92,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_0210.jpeg,train,Healthy,0,field,315.3779296875,93,1600,720
+Lessertia_Frutescens_2026-05-19_09_14_0211.jpeg,train,Healthy,0,field,314.6748046875,94,1600,720
+Lessertia_Frutescens_2026-05-19_09_14_02_0136.jpeg,train,Healthy,0,field,207.5341796875,62,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_03_0138.jpeg,train,Healthy,0,field,207.35546875,62,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_04_0139.jpeg,train,Healthy,0,field,207.6318359375,97,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_06_0141.jpeg,train,Healthy,0,field,207.5966796875,98,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_07_0142.jpeg,train,Healthy,0,field,193.623046875,99,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_08_0144.jpeg,train,Healthy,0,field,192.4267578125,100,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_09_0146.jpeg,train,Healthy,0,field,193.75,100,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_10_0148.jpeg,train,Healthy,0,field,194.4912109375,102,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_11_0150.jpeg,train,Healthy,0,field,195.5390625,103,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_12_0151.jpeg,train,Healthy,0,field,176.6962890625,104,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_13_0152.jpeg,train,Healthy,0,field,182.6689453125,105,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_14_0153.jpeg,train,Healthy,0,field,185.740234375,106,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_39_0194.jpeg,train,Healthy,0,field,171.970703125,107,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_40_0196.jpeg,train,Healthy,0,field,178.76171875,108,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_41_0197.jpeg,train,Healthy,0,field,172.1201171875,109,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_42_0199.jpeg,train,Healthy,0,field,178.6220703125,110,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_44_0202.jpeg,train,Healthy,0,field,180.6640625,111,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_45_0203.jpeg,train,Healthy,0,field,182.5830078125,112,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_46_0204.jpeg,train,Healthy,0,field,183.0419921875,113,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_47_0205.jpeg,train,Healthy,0,field,183.9189453125,114,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_48_0207.jpeg,train,Healthy,0,field,183.0703125,115,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_49_0209.jpeg,train,Healthy,0,field,176.318359375,116,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_52_0212.jpeg,train,Healthy,0,field,315.771484375,117,1600,720
+Lessertia_Frutescens_2026-05-19_09_14_53_0216.jpeg,train,Healthy,0,field,315.6796875,118,1600,720
+Lessertia_Frutescens_2026-05-19_09_14_54_0217.jpeg,train,Healthy,0,field,188.521484375,119,1280,576
+Lessertia_Frutescens_2026-05-19_09_18_39_0226.jpeg,train,Healthy,0,field,359.896484375,120,1600,720
+Lessertia_Frutescens_2026-05-19_09_18_41_0228.jpeg,train,Healthy,0,field,357.6494140625,121,1600,720
+Lessertia_Frutescens_2026-05-19_09_19_0234.jpeg,train,Healthy,0,field,272.1025390625,122,720,1600
+Lessertia_Frutescens_2026-05-19_09_19_21_0232.jpeg,train,Healthy,0,field,288.8876953125,123,1600,720
+Lessertia_Frutescens_2026-05-19_09_19_25_0233.jpeg,train,Healthy,0,field,337.17578125,124,1600,720
+Lessertia_Frutescens_2026-05-19_09_19_30_0236.jpeg,train,Healthy,0,field,306.7353515625,125,720,1600
+Lessertia_Frutescens_2026-05-19_09_19_32_0237.jpeg,train,Healthy,0,field,341.4931640625,126,1600,720
+Lessertia_Frutescens_2026-05-19_09_22_0240.jpeg,train,Healthy,0,field,242.349609375,127,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0250.jpeg,train,Healthy,0,field,304.728515625,128,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0251.jpeg,train,Healthy,0,field,311.626953125,129,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0253.jpeg,train,Healthy,0,field,326.611328125,130,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0255.jpeg,train,Healthy,0,field,332.6650390625,131,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0256.jpeg,train,Healthy,0,field,333.8173828125,132,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0265.jpeg,train,Healthy,0,field,421.439453125,133,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0268.jpeg,train,Healthy,0,field,581.3447265625,134,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0272.jpeg,train,Healthy,0,field,466.19140625,135,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0279.jpeg,train,Healthy,0,field,490.208984375,136,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0286.jpeg,train,Healthy,0,field,515.0576171875,137,1200,1600
+Lessertia_Frutescens_2026-05-19_09_22_0288.jpeg,train,Healthy,0,field,401.181640625,138,1200,1600
+Lessertia_Frutescens_2026-05-19_09_22_20_0242.jpeg,train,Healthy,0,field,224.490234375,139,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_23_0249.jpeg,train,Healthy,0,field,295.716796875,140,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_25_0254.jpeg,train,Healthy,0,field,325.3154296875,141,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_26_0257.jpeg,train,Healthy,0,field,316.8974609375,142,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_27_0259.jpeg,train,Healthy,0,field,373.234375,143,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_28_0261.jpeg,train,Healthy,0,field,411.4501953125,144,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_29_0262.jpeg,train,Healthy,0,field,397.9931640625,145,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_30_0263.jpeg,train,Healthy,0,field,399.150390625,146,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_31_0264.jpeg,train,Healthy,0,field,411.548828125,147,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_32_0266.jpeg,train,Healthy,0,field,422.5166015625,148,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_33_0267.jpeg,train,Healthy,0,field,573.2705078125,149,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_42_0280.jpeg,train,Healthy,0,field,551.736328125,150,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_43_0281.jpeg,train,Healthy,0,field,507.9853515625,151,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_51_0282.jpeg,train,Healthy,0,field,521.8173828125,152,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_52_0283.jpeg,train,Healthy,0,field,550.6982421875,153,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_54_0284.jpeg,train,Healthy,0,field,554.748046875,154,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_55_0285.jpeg,train,Healthy,0,field,441.97265625,155,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_56_0287.jpeg,train,Healthy,0,field,528.4765625,156,1200,1600
+Lessertia_Frutescens_2026-05-19_09_22_57_0289.jpeg,train,Healthy,0,field,557.2607421875,157,1200,1600
+Lessertia_Frutescens_2026-05-19_09_23_0291.jpeg,train,Healthy,0,field,463.6494140625,158,1200,1600
+Lessertia_Frutescens_2026-05-19_09_23_02_0290.jpeg,train,Healthy,0,field,442.7841796875,159,1200,1600
+Lessertia_Frutescens_2026-05-19_09_23_03_0292.jpeg,train,Healthy,0,field,497.06640625,160,1200,1600
+Lessertia_Frutescens_2026-05-19_09_23_04_0293.jpeg,train,Healthy,0,field,472.7587890625,161,1200,1600
+WhatsApp Image 2026-03-12 at 16.31.23.png,train,Healthy,0,field,819.22265625,162,1280,960
+WhatsApp Image 2026-03-12 at 16.31.24.jpeg,train,Healthy,0,field,340.783203125,163,1280,960
+WhatsApp Image 2026-03-12 at 16.31.25.1.jpeg,train,Healthy,0,field,350.1806640625,164,1280,960
+WhatsApp Image 2026-03-12 at 16.31.25.jpeg,train,Healthy,0,field,347.24609375,165,1280,960
+WhatsApp Image 2026-03-12 at 16.31.26.jpeg,train,Healthy,0,field,310.53125,166,1280,960
+WhatsApp Image 2026-03-12 at 16.31.27.jpeg,train,Healthy,0,field,306.5673828125,167,1280,960
+WhatsApp Image 2026-03-12 at 16.31.28.jpeg,train,Healthy,0,field,309.6005859375,168,1280,960
+WhatsApp Image 2026-03-12 at 16.31.29.jpeg,train,Healthy,0,field,332.794921875,169,1280,960
+WhatsApp Image 2026-03-12 at 16.31.30.jpeg,train,Healthy,0,field,307.15234375,170,1280,960
+WhatsApp Image 2026-03-12 at 16.31.31.jpeg,train,Healthy,0,field,278.708984375,171,1280,960
+WhatsApp Image 2026-03-12 at 16.31.32.jpeg,train,Healthy,0,field,311.66796875,172,1280,960
+WhatsApp Image 2026-03-12 at 16.31.33.png,train,Healthy,0,field,761.6962890625,173,1280,960
+WhatsApp Image 2026-03-12 at 16.31.34.jpeg,train,Healthy,0,field,290.177734375,174,1280,960
+WhatsApp Image 2026-03-12 at 16.31.35.jpeg,train,Healthy,0,field,287.1396484375,175,1280,960
+WhatsApp Image 2026-03-12 at 16.31.36.1.jpeg,train,Healthy,0,field,312.9453125,176,1280,960
+WhatsApp Image 2026-03-12 at 16.31.36.jpeg,train,Healthy,0,field,304.091796875,177,1280,960
+WhatsApp Image 2026-03-12 at 16.31.37.1.jpeg,train,Healthy,0,field,309.7626953125,178,1280,960
+WhatsApp Image 2026-03-12 at 16.31.37.jpeg,train,Healthy,0,field,309.7626953125,178,1280,960
+WhatsApp Image 2026-03-12 at 16.31.38.jpeg,train,Healthy,0,field,294.6552734375,180,1280,960
+WhatsApp Image 2026-03-12 at 16.31.39.jpeg,train,Healthy,0,field,280.4892578125,181,1280,960
+WhatsApp Image 2026-03-12 at 16.31.40.jpeg,train,Healthy,0,field,266.181640625,182,1280,960
+WhatsApp Image 2026-03-12 at 16.31.41.1.jpeg,train,Healthy,0,field,259.642578125,183,1280,960
+WhatsApp Image 2026-03-12 at 16.31.41.jpeg,train,Healthy,0,field,253.0,184,1280,960
+WhatsApp Image 2026-03-12 at 16.31.43.jpeg,train,Healthy,0,field,295.7119140625,185,1280,960
+WhatsApp Image 2026-03-12 at 16.31.44.jpeg,train,Healthy,0,field,234.751953125,186,1280,960
+WhatsApp Image 2026-03-12 at 16.31.45.jpeg,train,Healthy,0,field,275.8681640625,187,1280,960
+WhatsApp Image 2026-03-12 at 16.31.46.jpeg,train,Healthy,0,field,220.7998046875,188,1280,960
+WhatsApp Image 2026-03-12 at 16.31.47.jpeg,train,Healthy,0,field,254.509765625,189,1280,960
+WhatsApp Image 2026-03-12 at 16.31.48.jpeg,train,Healthy,0,field,265.953125,190,1280,960
+WhatsApp Image 2026-03-12 at 16.31.49.1.jpeg,train,Healthy,0,field,280.1142578125,191,1280,960
+WhatsApp Image 2026-03-12 at 16.31.49.jpeg,train,Healthy,0,field,268.16796875,192,1280,960
+WhatsApp Image 2026-03-12 at 16.31.50.jpeg,train,Healthy,0,field,279.83203125,193,1280,960
+WhatsApp Image 2026-03-12 at 16.31.51.jpeg,train,Healthy,0,field,289.91796875,194,1280,960
+WhatsApp Image 2026-03-12 at 16.31.52.jpeg,train,Healthy,0,field,241.1044921875,195,1280,960
+WhatsApp Image 2026-03-12 at 16.31.53.jpeg,train,Healthy,0,field,226.4501953125,196,1280,960
+WhatsApp Image 2026-03-12 at 16.31.54.jpeg,train,Healthy,0,field,283.1103515625,197,1280,960
+WhatsApp Image 2026-03-12 at 16.31.55.jpeg,train,Healthy,0,field,279.291015625,198,1280,960
+WhatsApp Image 2026-03-12 at 16.31.56.jpeg,train,Healthy,0,field,288.0185546875,199,1280,960
+WhatsApp Image 2026-03-12 at 16.31.57.jpeg,train,Healthy,0,field,288.4970703125,200,1280,960
+WhatsApp Image 2026-03-12 at 16.31.58.1.jpeg,train,Healthy,0,field,310.3994140625,201,1280,960
+WhatsApp Image 2026-03-12 at 16.31.58.jpeg,train,Healthy,0,field,330.1416015625,202,1280,960
+WhatsApp Image 2026-03-12 at 16.31.59.jpeg,train,Healthy,0,field,310.345703125,203,1280,960
+WhatsApp Image 2026-03-12 at 16.32.00.jpeg,train,Healthy,0,field,316.5673828125,204,1280,960
+WhatsApp Image 2026-03-12 at 16.32.02.jpeg,train,Healthy,0,field,272.6923828125,205,1280,960
+WhatsApp Image 2026-03-12 at 16.32.03.jpeg,train,Healthy,0,field,268.5849609375,206,1280,960
+WhatsApp Image 2026-03-12 at 16.32.04.jpeg,train,Healthy,0,field,272.2998046875,207,1280,960
+WhatsApp Image 2026-03-12 at 16.32.05.jpeg,train,Healthy,0,field,275.3818359375,208,1280,960
+WhatsApp Image 2026-03-12 at 16.32.06.jpeg,train,Healthy,0,field,285.74609375,209,1280,960
+WhatsApp Image 2026-03-12 at 16.32.07.jpeg,train,Healthy,0,field,299.783203125,210,1280,960
+WhatsApp Image 2026-03-19 at 09.51.00.jpeg,train,Healthy,0,field,340.783203125,163,1280,960
+WhatsApp Image 2026-03-19 at 09.51.01.jpeg,train,Healthy,0,field,347.24609375,165,1280,960
+WhatsApp Image 2026-03-19 at 09.51.24.jpeg,train,Healthy,0,field,99.5302734375,213,1280,720
+WhatsApp Image 2026-03-19 at 09.51.25.jpeg,train,Healthy,0,field,205.1748046875,214,1280,720
+WhatsApp Image 2026-03-19 at 09.51.26.jpeg,train,Healthy,0,field,289.4462890625,215,1280,720
+WhatsApp Image 2026-03-19 at 09.51.27.jpeg,train,Healthy,0,field,319.607421875,216,1280,720
+WhatsApp Image 2026-03-19 at 09.51.28.jpeg,train,Healthy,0,field,304.66015625,217,1280,720
+WhatsApp Image 2026-03-19 at 09.52.06 (1).jpeg,train,Healthy,0,field,171.3876953125,218,1280,720
+WhatsApp Image 2026-03-19 at 09.52.06.jpeg,train,Healthy,0,field,222.00390625,219,1280,720
+WhatsApp Image 2026-03-19 at 09.52.07 (1).jpeg,train,Healthy,0,field,163.8994140625,220,720,1280
+WhatsApp Image 2026-03-19 at 09.52.07.jpeg,train,Healthy,0,field,242.6337890625,221,1280,720
+WhatsApp Image 2026-03-19 at 09.52.08 (1).jpeg,train,Healthy,0,field,235.5859375,222,720,1280
+WhatsApp Image 2026-03-19 at 09.52.08.jpeg,train,Healthy,0,field,271.8681640625,223,720,1280
+WhatsApp Image 2026-03-19 at 09.52.09 (1).jpeg,train,Healthy,0,field,285.759765625,224,1280,720
+WhatsApp Image 2026-03-19 at 09.52.09.jpeg,train,Healthy,0,field,211.08203125,225,1280,720
+WhatsApp Image 2026-03-19 at 09.52.10 (1).jpeg,train,Healthy,0,field,235.36328125,226,720,1280
+WhatsApp Image 2026-03-19 at 09.52.10.jpeg,train,Healthy,0,field,293.8203125,227,1280,720
+WhatsApp Image 2026-03-19 at 09.52.11 (1).jpeg,train,Healthy,0,field,311.2607421875,228,1280,720
+WhatsApp Image 2026-03-19 at 09.52.11.jpeg,train,Healthy,0,field,297.3037109375,229,1280,720
+WhatsApp Image 2026-03-19 at 09.52.12 (1).jpeg,train,Healthy,0,field,296.58984375,230,1280,720
+WhatsApp Image 2026-03-19 at 09.52.12.jpeg,train,Healthy,0,field,296.408203125,231,1280,720
+WhatsApp Image 2026-03-19 at 09.52.13 (1).jpeg,train,Healthy,0,field,225.658203125,232,1280,720
+WhatsApp Image 2026-03-19 at 09.52.13.jpeg,train,Healthy,0,field,188.734375,233,1280,720
+WhatsApp Image 2026-03-19 at 09.52.14.jpeg,train,Healthy,0,field,184.404296875,234,1280,720
+WhatsApp Image 2026-03-19 at 09.52.15 (1).jpeg,train,Healthy,0,field,301.0,235,1280,720
+WhatsApp Image 2026-03-19 at 09.52.15.jpeg,train,Healthy,0,field,253.484375,236,720,1280
+WhatsApp Image 2026-03-19 at 09.52.16 (1).jpeg,train,Healthy,0,field,169.080078125,237,1280,720
+WhatsApp Image 2026-03-19 at 09.52.16.jpeg,train,Healthy,0,field,129.5908203125,238,1280,720
+WhatsApp Image 2026-03-19 at 09.52.17 (1).jpeg,train,Healthy,0,field,182.88671875,239,1280,720
+WhatsApp Image 2026-03-19 at 09.52.17 (2).jpeg,train,Healthy,0,field,285.6953125,240,1280,720
+WhatsApp Image 2026-03-19 at 09.52.17.jpeg,train,Healthy,0,field,272.6435546875,241,1280,720
+WhatsApp Image 2026-03-19 at 09.52.19 (1).jpeg,train,Healthy,0,field,215.5546875,242,1280,720
+WhatsApp Image 2026-03-19 at 09.52.19 (2).jpeg,train,Healthy,0,field,285.3779296875,243,1280,720
+WhatsApp Image 2026-03-19 at 09.52.19.jpeg,train,Healthy,0,field,302.68359375,244,1280,720
+WhatsApp Image 2026-03-19 at 09.52.20 (1).jpeg,train,Healthy,0,field,259.47265625,245,1280,720
+WhatsApp Image 2026-03-19 at 09.52.20.jpeg,train,Healthy,0,field,257.845703125,246,1280,720
+WhatsApp Image 2026-03-19 at 09.52.21 (1).jpeg,train,Healthy,0,field,216.984375,247,1280,720
+WhatsApp Image 2026-03-19 at 09.52.21.jpeg,train,Healthy,0,field,301.5107421875,248,1280,720
+WhatsApp Image 2026-03-19 at 09.52.22 (1).jpeg,train,Healthy,0,field,274.1044921875,249,1280,720
+WhatsApp Image 2026-03-19 at 09.52.22.jpeg,train,Healthy,0,field,296.509765625,250,1280,720
+WhatsApp Image 2026-03-19 at 09.52.23 (1).jpeg,train,Healthy,0,field,288.361328125,251,1280,720
+WhatsApp Image 2026-03-19 at 09.52.23.jpeg,train,Healthy,0,field,208.751953125,252,1280,720
+WhatsApp Image 2026-03-19 at 09.52.24 (1).jpeg,train,Healthy,0,field,271.4951171875,253,1280,720
+WhatsApp Image 2026-03-19 at 09.52.24 (2).jpeg,train,Healthy,0,field,91.4931640625,254,1280,720
+WhatsApp Image 2026-03-19 at 09.52.24.jpeg,train,Healthy,0,field,266.8203125,255,1280,720
+WhatsApp Image 2026-03-19 at 09.52.25 (1).jpeg,train,Healthy,0,field,207.3447265625,256,1280,720
+WhatsApp Image 2026-03-19 at 09.52.25 (2).jpeg,train,Healthy,0,field,200.953125,257,1280,720
+WhatsApp Image 2026-03-19 at 09.52.25.jpeg,train,Healthy,0,field,243.548828125,258,1280,720
+WhatsApp Image 2026-03-19 at 09.52.26 (1).png,train,Healthy,0,field,770.349609375,259,1280,720
+WhatsApp Image 2026-03-19 at 09.52.26 (2).jpeg,train,Healthy,0,field,251.7158203125,260,720,1280
+WhatsApp Image 2026-03-19 at 09.52.26.jpeg,train,Healthy,0,field,295.31640625,261,1280,720
+WhatsApp Image 2026-03-19 at 09.52.27 (1).jpeg,train,Healthy,0,field,198.306640625,262,720,1280
+WhatsApp Image 2026-03-19 at 09.52.27.jpeg,train,Healthy,0,field,242.8388671875,263,720,1280
+WhatsApp Image 2026-03-19 at 09.52.28 (1).jpeg,train,Healthy,0,field,228.0087890625,264,1280,720
+flickr_49310093681.jpg,train,Stressed,1,field,3234.6201171875,265,4000,3000
+flickr_49316318982.jpg,train,Stressed,1,field,3986.5302734375,266,3000,4000
+flickr_50665917206.jpg,train,Stressed,1,field,2181.8701171875,267,3000,4000
+flickr_51989352997.jpg,train,Stressed,1,field,2693.0830078125,268,1893,2839
+flickr_52712419636.jpg,train,Stressed,1,field,2467.0537109375,269,2848,2848
+flickr_54793033387.jpg,train,Stressed,1,field,11149.865234375,270,3485,5907
+flickr_54968737315.jpg,train,Stressed,1,field,346.544921875,271,1536,2048
+j.jpg,train,Stressed,1,field,601.0615234375,272,1024,768
+large (1).jpeg,train,Stressed,1,field,196.603515625,273,480,720
+large (1).jpg,train,Stressed,1,field,444.927734375,274,768,1024
+large (2).jpg,train,Stressed,1,field,395.7109375,275,768,1024
+large (3).jpg,train,Stressed,1,field,589.287109375,276,768,1024
+large (4).jpg,train,Stressed,1,field,559.099609375,277,1024,768
+large (5).jpg,train,Stressed,1,field,459.5439453125,278,1024,768
+large (6).jpg,train,Stressed,1,field,370.1865234375,279,768,1024
+large.jpeg,train,Stressed,1,field,179.5107421875,280,480,720
+large.jpg,train,Stressed,1,field,619.15625,281,768,1024
+Lessertia frutescens6.jpg,train,Stressed,1,field,43.8193359375,282,300,400
+Lessertia_Frutescens_2026-05-15_15_33_0002.jpeg,train,Stressed,1,field,330.2607421875,283,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_0004.jpeg,train,Stressed,1,field,321.8681640625,284,1280,960
+Lessertia_Frutescens_2026-05-19_09_14_15_0155.jpeg,train,Stressed,1,field,186.4951171875,285,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_16_0156.jpeg,train,Stressed,1,field,188.2646484375,286,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_17_0158.jpeg,train,Stressed,1,field,186.689453125,287,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_18_0160.jpeg,train,Stressed,1,field,189.3251953125,288,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_19_0162.jpeg,train,Stressed,1,field,192.638671875,289,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_20_0164.jpeg,train,Stressed,1,field,191.4189453125,290,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_21_0167.jpeg,train,Stressed,1,field,192.046875,291,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_22_0169.jpeg,train,Stressed,1,field,193.6982421875,292,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_23_0170.jpeg,train,Stressed,1,field,192.654296875,293,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_24_0173.jpeg,train,Stressed,1,field,191.244140625,294,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_25_0174.jpeg,train,Stressed,1,field,192.7978515625,295,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_26_0176.jpeg,train,Stressed,1,field,194.052734375,296,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_28_0178.jpeg,train,Stressed,1,field,194.271484375,297,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_29_0179.jpeg,train,Stressed,1,field,189.166015625,298,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_30_0180.jpeg,train,Stressed,1,field,186.337890625,299,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_31_0182.jpeg,train,Stressed,1,field,182.4052734375,300,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_32_0183.jpeg,train,Stressed,1,field,181.4169921875,301,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_34_0185.jpeg,train,Stressed,1,field,175.0400390625,302,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_35_0187.jpeg,train,Stressed,1,field,177.333984375,303,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_36_0189.jpeg,train,Stressed,1,field,169.93359375,304,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_37_0192.jpeg,train,Stressed,1,field,167.3310546875,305,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_38_0193.jpeg,train,Stressed,1,field,176.4267578125,306,1280,576
+Lessertia_Frutescens_2026-05-19_09_14_43_0201.jpeg,train,Stressed,1,field,182.7998046875,307,1280,576
+Lessertia_Frutescens_2026-05-19_09_17_52_0218.jpeg,train,Stressed,1,field,263.138671875,308,1600,720
+Lessertia_Frutescens_2026-05-19_09_17_55_0219.jpeg,train,Stressed,1,field,316.46875,309,1600,720
+Lessertia_Frutescens_2026-05-19_09_17_57_0220.jpeg,train,Stressed,1,field,331.8134765625,310,720,1600
+Lessertia_Frutescens_2026-05-19_09_18_0222.jpeg,train,Stressed,1,field,285.91796875,311,1600,720
+Lessertia_Frutescens_2026-05-19_09_18_0224.jpeg,train,Stressed,1,field,224.01953125,312,1600,720
+Lessertia_Frutescens_2026-05-19_09_18_0227.jpeg,train,Stressed,1,field,222.9375,313,1600,720
+Lessertia_Frutescens_2026-05-19_09_18_04_0221.jpeg,train,Stressed,1,field,361.53125,314,1600,720
+Lessertia_Frutescens_2026-05-19_09_18_05_0223.jpeg,train,Stressed,1,field,260.6298828125,315,1600,720
+Lessertia_Frutescens_2026-05-19_09_18_38_0225.jpeg,train,Stressed,1,field,282.7666015625,316,1600,720
+Lessertia_Frutescens_2026-05-19_09_19_16_0229.jpeg,train,Stressed,1,field,325.443359375,317,1600,720
+Lessertia_Frutescens_2026-05-19_09_19_19_0230.jpeg,train,Stressed,1,field,325.2236328125,318,1600,720
+Lessertia_Frutescens_2026-05-19_09_19_20_0231.jpeg,train,Stressed,1,field,326.9384765625,319,1600,720
+Lessertia_Frutescens_2026-05-19_09_19_28_0235.jpeg,train,Stressed,1,field,357.857421875,320,1600,720
+Lessertia_Frutescens_2026-05-19_09_22_0238.jpeg,train,Stressed,1,field,425.447265625,321,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0275.jpeg,train,Stressed,1,field,530.6826171875,322,1200,1600
+Lessertia_Frutescens_2026-05-19_09_23_07_0294.jpeg,train,Stressed,1,field,472.203125,323,1200,1600
+Lessertia_Frutescens_2026-05-19_09_23_08_0295.jpeg,train,Stressed,1,field,194.3388671875,324,1200,1600
+flickr_54802262454.jpg,validation,Healthy,0,field,5201.17578125,325,2453,4079
+flickr_54802272543.jpg,validation,Healthy,0,field,5518.3916015625,326,3602,5784
+flickr_54888041586.jpg,validation,Healthy,0,field,7549.708984375,327,3768,6267
+flickr_8166926325.jpg,validation,Healthy,0,field,926.015625,328,800,800
+flickr_8166927015.jpg,validation,Healthy,0,field,632.07421875,329,800,800
+istockphoto-1132622774-612x612 (1).jpg,validation,Healthy,0,field,51.1591796875,330,408,612
+istockphoto-1132622774-612x612.jpg,validation,Healthy,0,field,51.1591796875,330,408,612
+Lessertia frutescens1.jpg,validation,Healthy,0,field,106.9287109375,332,415,622
+Lessertia frutescens2.jpg,validation,Healthy,0,field,28.384765625,333,400,400
+Lessertia frutescens3.jpg,validation,Healthy,0,field,27.6591796875,334,400,400
+Lessertia frutescens5.jpg,validation,Healthy,0,field,33.8076171875,335,300,400
+Lessertia_Frutescens_2026-05-15_15_33_46_0001.jpeg,validation,Healthy,0,field,322.490234375,336,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_47_0003.jpeg,validation,Healthy,0,field,328.154296875,337,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_49_0005.jpeg,validation,Healthy,0,field,326.4521484375,338,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_51_0006.jpeg,validation,Healthy,0,field,320.724609375,339,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_52_0007.jpeg,validation,Healthy,0,field,324.689453125,340,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_53_0008.jpeg,validation,Healthy,0,field,320.1474609375,341,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_54_0009.jpeg,validation,Healthy,0,field,322.62890625,342,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_56_0010.jpeg,validation,Healthy,0,field,322.7001953125,343,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_57_0011.jpeg,validation,Healthy,0,field,321.384765625,344,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_58_0012.jpeg,validation,Healthy,0,field,321.1669921875,345,1280,960
+Lessertia_Frutescens_2026-05-15_15_33_59_0013.jpeg,validation,Healthy,0,field,328.9697265625,346,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_00_0014.jpeg,validation,Healthy,0,field,333.40625,347,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_01_0015.jpeg,validation,Healthy,0,field,329.15234375,348,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_02_0016.jpeg,validation,Healthy,0,field,362.87890625,349,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_03_0017.jpeg,validation,Healthy,0,field,360.28125,350,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_04_0018.jpeg,validation,Healthy,0,field,359.134765625,351,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_05_0019.jpeg,validation,Healthy,0,field,359.533203125,352,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_06_0020.jpeg,validation,Healthy,0,field,365.4130859375,353,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_07_0021.jpeg,validation,Healthy,0,field,368.42578125,354,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_08_0022.jpeg,validation,Healthy,0,field,336.0908203125,355,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_10_0023.jpeg,validation,Healthy,0,field,345.0625,356,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_12_0024.jpeg,validation,Healthy,0,field,349.6640625,357,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_14_0025.jpeg,validation,Healthy,0,field,347.5283203125,358,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_15_0026.jpeg,validation,Healthy,0,field,316.6171875,359,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_16_0027.jpeg,validation,Healthy,0,field,296.677734375,360,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_17_0028.jpeg,validation,Healthy,0,field,246.126953125,361,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_18_0029.jpeg,validation,Healthy,0,field,209.599609375,362,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_19_0030.jpeg,validation,Healthy,0,field,215.4462890625,363,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_20_0031.jpeg,validation,Healthy,0,field,217.228515625,364,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_22_0032.jpeg,validation,Healthy,0,field,219.353515625,365,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_23_0033.jpeg,validation,Healthy,0,field,299.5341796875,366,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_24_0034.jpeg,validation,Healthy,0,field,301.7373046875,367,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_25_0035.jpeg,validation,Healthy,0,field,276.3955078125,368,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_27_0036.jpeg,validation,Healthy,0,field,304.7646484375,369,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_28_0037.jpeg,validation,Healthy,0,field,334.2431640625,370,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_29_0038.jpeg,validation,Healthy,0,field,339.1376953125,371,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_31_0039.jpeg,validation,Healthy,0,field,318.8486328125,372,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_34_0040.jpeg,validation,Healthy,0,field,321.4189453125,373,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_35_0041.jpeg,validation,Healthy,0,field,343.7001953125,374,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_36_0042.jpeg,validation,Healthy,0,field,347.4580078125,375,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_39_0043.jpeg,validation,Healthy,0,field,357.1669921875,376,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_40_0044.jpeg,validation,Healthy,0,field,363.0703125,377,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_41_0045.jpeg,validation,Healthy,0,field,434.4697265625,378,1280,960
+Lessertia_Frutescens_2026-05-19_09_14_0213.jpeg,validation,Healthy,0,field,315.23828125,379,1600,720
+Lessertia_Frutescens_2026-05-19_09_14_0214.jpeg,validation,Healthy,0,field,314.486328125,380,1600,720
+Lessertia_Frutescens_2026-05-19_09_14_0215.jpeg,validation,Healthy,0,field,315.384765625,381,1600,720
+flickr_10360771825.jpg,validation,Stressed,1,field,3429.833984375,382,2448,3264
+flickr_11751867335.jpg,validation,Stressed,1,field,3905.8427734375,383,3456,5184
+flickr_32732229511.jpg,validation,Stressed,1,field,12987.1826171875,384,3648,3616
+flickr_33882187994.jpg,validation,Stressed,1,field,2139.6923828125,385,5184,3456
+flickr_34546482831.jpg,validation,Stressed,1,field,2764.4619140625,386,3456,5184
+flickr_34684328286.jpg,validation,Stressed,1,field,1992.23828125,387,5184,3456
+flickr_39939290322.jpg,validation,Stressed,1,field,3970.1552734375,388,4000,3000
+Lessertia_Frutescens_2026-05-19_09_22_0239.jpeg,validation,Stressed,1,field,217.01953125,389,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0241.jpeg,validation,Stressed,1,field,207.87890625,390,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0243.jpeg,validation,Stressed,1,field,361.09375,391,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0244.jpeg,validation,Stressed,1,field,348.759765625,392,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0246.jpeg,validation,Stressed,1,field,328.8701171875,393,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0248.jpeg,validation,Stressed,1,field,396.8330078125,394,1600,1200
+flickr_11751857815.jpg,test,Healthy,0,field,1875.62109375,395,3055,2948
+flickr_15445912928.jpg,test,Healthy,0,field,2642.3203125,396,2731,4096
+flickr_15950930522.jpg,test,Healthy,0,field,2127.0517578125,397,3000,4512
+flickr_20192795742.jpg,test,Healthy,0,field,1757.0107421875,398,5184,3456
+flickr_25110216067.jpg,test,Healthy,0,field,3107.1728515625,399,3000,4000
+flickr_26155724253.jpg,test,Healthy,0,field,5041.2216796875,400,3632,5456
+flickr_3018983052.jpg,test,Healthy,0,field,392.2734375,401,683,1024
+flickr_3018983904.jpg,test,Healthy,0,field,513.3935546875,402,683,1024
+flickr_32702440572.jpg,test,Healthy,0,field,7299.564453125,403,3648,3298
+flickr_34546468491.jpg,test,Healthy,0,field,1875.9921875,404,3456,4090
+flickr_34636034856.jpg,test,Healthy,0,field,3050.669921875,405,5184,3456
+flickr_36913899925.jpg,test,Healthy,0,field,5099.771484375,406,5472,3648
+flickr_43995617885.jpg,test,Healthy,0,field,149.66015625,407,1024,576
+flickr_44034640330.jpg,test,Healthy,0,field,489.1748046875,408,1068,1600
+flickr_48699762771.jpg,test,Healthy,0,field,2192.810546875,409,4096,3093
+flickr_49696769188.jpg,test,Healthy,0,field,130.775390625,410,612,800
+flickr_49697610097.jpg,test,Healthy,0,field,135.712890625,411,535,800
+flickr_49710965463.jpg,test,Healthy,0,field,130.775390625,410,612,800
+flickr_49711067163.jpg,test,Healthy,0,field,135.712890625,411,535,800
+flickr_49711501866.jpg,test,Healthy,0,field,135.712890625,411,535,800
+flickr_49711600581.jpg,test,Healthy,0,field,130.775390625,410,612,800
+flickr_50331338578.jpg,test,Healthy,0,field,4378.455078125,416,4000,6000
+flickr_50331391648.jpg,test,Healthy,0,field,3807.2490234375,417,3765,5371
+flickr_50332188832.jpg,test,Healthy,0,field,4973.33984375,418,6000,4000
+flickr_50404955902.jpg,test,Healthy,0,field,5186.0,419,3000,4000
+flickr_52712418356.jpg,test,Healthy,0,field,2737.64453125,420,2848,2848
+flickr_52712681274.jpg,test,Healthy,0,field,1610.423828125,421,2304,3072
+flickr_52713430193.jpg,test,Healthy,0,field,1981.18359375,422,2720,4095
+flickr_54793034972.jpg,test,Healthy,0,field,5206.5986328125,423,3768,6200
+flickr_54801166307.jpg,test,Healthy,0,field,2411.5634765625,424,3179,5472
+Lessertia_Frutescens_2026-05-15_15_34_42_0046.jpeg,test,Healthy,0,field,432.486328125,425,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_43_0047.jpeg,test,Healthy,0,field,430.42578125,426,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_45_0048.jpeg,test,Healthy,0,field,429.9775390625,427,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_46_0049.jpeg,test,Healthy,0,field,431.669921875,428,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_47_0050.jpeg,test,Healthy,0,field,430.470703125,429,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_48_0051.jpeg,test,Healthy,0,field,431.12109375,430,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_49_0052.jpeg,test,Healthy,0,field,430.5693359375,431,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_50_0053.jpeg,test,Healthy,0,field,421.484375,432,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_51_0054.jpeg,test,Healthy,0,field,361.2373046875,433,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_52_0055.jpeg,test,Healthy,0,field,357.017578125,434,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_53_0056.jpeg,test,Healthy,0,field,358.2666015625,435,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_54_0057.jpeg,test,Healthy,0,field,358.1181640625,436,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_55_0058.jpeg,test,Healthy,0,field,358.3955078125,437,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_57_0059.jpeg,test,Healthy,0,field,363.7001953125,438,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_58_0060.jpeg,test,Healthy,0,field,362.0341796875,439,1280,960
+Lessertia_Frutescens_2026-05-15_15_34_59_0061.jpeg,test,Healthy,0,field,364.2529296875,440,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_00_0062.jpeg,test,Healthy,0,field,367.07421875,441,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_01_0063.jpeg,test,Healthy,0,field,366.447265625,442,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_02_0064.jpeg,test,Healthy,0,field,372.62890625,443,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_03_0065.jpeg,test,Healthy,0,field,361.884765625,444,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_04_0066.jpeg,test,Healthy,0,field,353.453125,445,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_05_0067.jpeg,test,Healthy,0,field,311.6298828125,446,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_06_0068.jpeg,test,Healthy,0,field,330.8037109375,447,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_08_0069.jpeg,test,Healthy,0,field,337.7685546875,448,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_09_0070.jpeg,test,Healthy,0,field,353.26953125,449,1280,960
+Lessertia_Frutescens_2026-05-15_15_35_10_0071.jpeg,test,Healthy,0,field,354.36328125,450,1280,960
+Lessertia_Frutescens_2026-05-19_09_22_0258.jpeg,test,Stressed,1,field,403.833984375,451,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_0260.jpeg,test,Stressed,1,field,413.4345703125,452,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_21_0245.jpeg,test,Stressed,1,field,338.166015625,453,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_22_0247.jpeg,test,Stressed,1,field,328.7998046875,454,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_24_0252.jpeg,test,Stressed,1,field,343.404296875,455,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_34_0269.jpeg,test,Stressed,1,field,565.37109375,456,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_35_0270.jpeg,test,Stressed,1,field,346.5078125,457,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_36_0271.jpeg,test,Stressed,1,field,383.8818359375,458,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_37_0273.jpeg,test,Stressed,1,field,442.111328125,459,1600,1200
+Lessertia_Frutescens_2026-05-19_09_22_38_0274.jpeg,test,Stressed,1,field,529.2060546875,460,1200,1600
+Lessertia_Frutescens_2026-05-19_09_22_39_0276.jpeg,test,Stressed,1,field,518.0458984375,461,1200,1600
+Lessertia_Frutescens_2026-05-19_09_22_40_0277.jpeg,test,Stressed,1,field,576.439453125,462,1200,1600
+Lessertia_Frutescens_2026-05-19_09_22_41_0278.jpeg,test,Stressed,1,field,580.4970703125,463,1600,1200

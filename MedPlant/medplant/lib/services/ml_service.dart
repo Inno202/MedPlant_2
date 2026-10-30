@@ -187,6 +187,9 @@ class MLService {
   static const String _baseUrl = 'http://localhost:8000';
   static const Duration _timeout = Duration(seconds: 30);
 
+  // static const String _baseUrl = 'https://medplant-ml-server.onrender.com';
+  // static const Duration _timeout = Duration(seconds: 60);
+
   // ── AddReportScreen: F1+F2+F3 from raw image bytes ───────────────────────
   static Future<FullPipelineResult?> runFullPipelineFromBytes(
     Uint8List imageBytes, {
