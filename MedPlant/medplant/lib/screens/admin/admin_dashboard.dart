@@ -101,7 +101,7 @@ class AdminDashboardScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // ── Degradation alerts ─────────────────────────────────────
-            _sectionTitle("⚠ Degradation Alerts"),
+            _sectionTitle("Degradation Alerts"),
             const SizedBox(height: 10),
             _LiveAlertsList(),
             const SizedBox(height: 20),
@@ -110,12 +110,6 @@ class AdminDashboardScreen extends StatelessWidget {
             _sectionTitle("Species Health Summary"),
             const SizedBox(height: 10),
             _LiveHealthTable(),
-            const SizedBox(height: 20),
-
-            // ── ML pipeline status ─────────────────────────────────────
-            _sectionTitle("ML Pipeline Status"),
-            const SizedBox(height: 10),
-            _mlStatusCard(),
             const SizedBox(height: 20),
 
             // ── Top damage types ───────────────────────────────────────
@@ -137,51 +131,6 @@ class AdminDashboardScreen extends StatelessWidget {
           color: AppColors.primaryDark,
         ),
       );
-
-  Widget _mlStatusCard() {
-    final functions = [
-      [
-        'F1 · Species Identification',
-        'Random Forest',
-        '94.2% accuracy',
-        Icons.search
-      ],
-      [
-        'F2 · Leaf Health (Healthy / Stressed)',
-        'Random Forest — binary classification + supporting evidence',
-        '88.7% accuracy',
-        Icons.health_and_safety
-      ],
-      [
-        'F3 · Trend & Monitoring',
-        'Linear regression over prior F2 scores → Improving / Stable / Declining',
-        'N/A — deterministic, not classifier accuracy',
-        Icons.trending_up
-      ],
-    ];
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSoft),
-      ),
-      child: Column(
-        children: functions
-            .map((f) => ListTile(
-                  leading: Icon(f[3] as IconData,
-                      color: AppColors.primary, size: 20),
-                  title: Text(f[0] as String,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: Text("${f[1]} · ${f[2]}",
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.grey)),
-                  dense: true,
-                ))
-            .toList(),
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
