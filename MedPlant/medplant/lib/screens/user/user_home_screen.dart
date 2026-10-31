@@ -6,13 +6,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:medplant/models/plant_model.dart';
-import 'package:medplant/models/user_role.dart';
 import 'package:medplant/providers/user_provider.dart';
 import 'package:medplant/widgets/auth_cta_section.dart';
 import 'package:medplant/widgets/badge_row.dart';
 import 'package:medplant/widgets/capability_grid.dart';
 import 'package:medplant/widgets/hero_section.dart';
-import 'package:medplant/widgets/info_grid.dart';
 import 'package:medplant/widgets/plant_grid.dart';
 import 'package:medplant/widgets/section_header.dart';
 import 'package:medplant/constants/app_colors.dart';
@@ -27,6 +25,10 @@ class UserHomeScreen extends StatelessWidget {
     return PlantModel(
       name: d['name'] ?? 'Unknown species',
       scientificName: d['commonName'],
+      commonName: d['commonName'],
+      genus: d['genus'],
+      partsUsed: d['partsUsed'],
+      speciesId: doc.id,
       imageUrl: (d['imageUrl'] as String?)?.isNotEmpty == true
           ? d['imageUrl'] as String
           : 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6',
@@ -46,13 +48,17 @@ class UserHomeScreen extends StatelessWidget {
     final isLoggedIn = userProvider.role != null;
 
     return Scaffold(
+      backgroundColor: AppColors.pageBg,
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               const HeroSection(),
               const SizedBox(height: 15),
 
@@ -75,7 +81,9 @@ class UserHomeScreen extends StatelessWidget {
 
                   // Error
                   if (snapshot.hasError) {
-                    return _SpeciesError(message: snapshot.error.toString());
+                    return const _SpeciesError(
+                        message:
+                            "please check your internet connection.");
                   }
 
                   final docs = snapshot.data?.docs ?? [];
@@ -102,6 +110,7 @@ class UserHomeScreen extends StatelessWidget {
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -117,11 +126,11 @@ class _SpeciesLoadingGrid extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: 8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 320,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.9,
+        childAspectRatio: 1.1,
       ),
       itemCount: 4,
       itemBuilder: (_, __) => Container(

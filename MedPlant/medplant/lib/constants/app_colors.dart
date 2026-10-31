@@ -9,6 +9,7 @@ class AppColors {
   // Backgrounds
   static const Color accentBg = Color(0xFFE8F5EE);
   static const Color accentBgDark = Color(0xFFD0EDDC);
+  static const Color pageBg = Color(0xFFF7FAF8);
 
   // Text Colors
   static const Color textPrimary = Color(0xFF4A5568);

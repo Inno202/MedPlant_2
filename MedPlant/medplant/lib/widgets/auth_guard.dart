@@ -17,12 +17,17 @@ class AuthGuard extends StatelessWidget {
   final List<UserRole>? allowedRoles;
   final String restrictedMessage;
 
+  /// Optional layout to put the guard message in (e.g. a SecondaryScaffold
+  /// with a back button). When null the message fills the available space.
+  final Widget Function(Widget guard)? wrapper;
+
   const AuthGuard({
     super.key,
     required this.child,
     this.message = "Please log in to view this page.",
     this.allowedRoles,
     this.restrictedMessage = "You don't have access to this page.",
+    this.wrapper,
   });
 
   @override
@@ -30,26 +35,28 @@ class AuthGuard extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
 
     if (!userProvider.isLoggedIn) {
-      return _guardScaffold(
+      return _wrap(_guardScaffold(
         context,
         icon: Icons.lock_outline,
         text: message,
         showLoginButton: true,
-      );
+      ));
     }
 
     if (allowedRoles != null &&
         !allowedRoles!.contains(userProvider.role)) {
-      return _guardScaffold(
+      return _wrap(_guardScaffold(
         context,
         icon: Icons.block,
         text: restrictedMessage,
         showLoginButton: false,
-      );
+      ));
     }
 
     return child;
   }
+
+  Widget _wrap(Widget guard) => wrapper == null ? guard : wrapper!(guard);
 
   Widget _guardScaffold(
     BuildContext context, {
@@ -57,9 +64,9 @@ class AuthGuard extends StatelessWidget {
     required String text,
     required bool showLoginButton,
   }) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7FAF8),
-      body: Center(
+    return Material(
+      color: AppColors.pageBg,
+      child: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -79,7 +86,7 @@ class AuthGuard extends StatelessWidget {
               const SizedBox(height: 20),
               if (showLoginButton)
                 ElevatedButton.icon(
-                  onPressed: () => context.go('/login'),
+                  onPressed: () => context.push('/login'),
                   icon: const Icon(Icons.login, color: Colors.white),
                   label: const Text("Login",
                       style: TextStyle(color: Colors.white)),

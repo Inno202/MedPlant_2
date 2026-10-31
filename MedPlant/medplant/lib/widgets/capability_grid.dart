@@ -1,43 +1,26 @@
 // widgets/capability_grid.dart
+// Responsive: 1 column on phones, more on tablets/desktop. Card height
+// follows its content (the old fixed aspect ratio clipped text on small
+// phones and left gaps on large screens).
 import 'package:flutter/material.dart';
-import '../models/capability.dart';
 import '../data/capabilities.dart';
 import 'capability_card.dart';
+import 'responsive_wrap_grid.dart';
 
 class CapabilityGrid extends StatelessWidget {
   const CapabilityGrid({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    int gridColumns = 1;
-    double mobileCardHeight = 150; // fixed height for mobile
-
-    if (screenWidth >= 600) gridColumns = 2;
-    if (screenWidth >= 900) gridColumns = 3;
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: coreCapabilities.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: gridColumns,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: gridColumns == 1 ? 3 : 1.2,
+      child: ResponsiveWrapGrid(
+        minItemWidth: 280,
+        maxColumns: 3,
+        children: coreCapabilities
+            .map((c) => CapabilityCard(capability: c))
+            .toList(),
       ),
-      itemBuilder: (context, index) {
-        final card = CapabilityCard(capability: coreCapabilities[index]);
-
-        // On mobile, wrap in fixed height; on large screens, allow intrinsic height
-        if (screenWidth < 600) {
-          return SizedBox(height: mobileCardHeight, child: card);
-        } else {
-          return IntrinsicHeight(child: card);
-        }
-      },
     );
   }
 }

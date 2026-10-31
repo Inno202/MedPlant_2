@@ -31,13 +31,14 @@ class DrawerNavItem extends StatelessWidget {
         ),
       ),
       tileColor:
-          isActive ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
       // shape: RoundedRectangleBorder(
       //   borderRadius: BorderRadius.circular(30),
       // ),
       onTap: () {
         Navigator.pop(context);
-        context.go(route);
+        // Secondary pages are pushed so Back returns to the current tab.
+        context.push(route);
       },
     );
   }

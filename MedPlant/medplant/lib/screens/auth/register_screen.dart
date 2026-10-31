@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -46,7 +47,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  void _backToLogin() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/login');
+    }
+  }
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    emailController.dispose();
+    contactController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    countryController.dispose();
+    provinceController.dispose();
+    super.dispose();
+  }
+
+  static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  String? _required(String? v) =>
+      (v == null || v.trim().isEmpty) ? "Required" : null;
+
   Future<void> handleRegister() async {
+  FocusScope.of(context).unfocus();
   if (!_formKey.currentState!.validate()) return;
   if (!validatePasswords()) return;
 
@@ -76,11 +103,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   if (result['success'] == true) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Registration successful"),
+        content: Text("Account created — please log in."),
+        backgroundColor: AppColors.primary,
       ),
     );
 
-    context.go('/login');
+    // Back to the login page this screen was opened from.
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/login');
+    }
   } else {
     setState(() {
       _error = result['error'];
@@ -93,6 +126,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.primaryDark,
+        iconTheme: const IconThemeData(color: AppColors.primaryDark),
+        systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: Colors.transparent,
+        ),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: _backToLogin,
+        ),
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -104,6 +152,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
+              padding: const EdgeInsets.only(top: kToolbarHeight - 12),
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
               child: Container(
                 width: size.width * 0.9,
                 constraints: const BoxConstraints(maxWidth: 500),
@@ -227,8 +278,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               hint: "Enter username",
                               icon: FontAwesomeIcons.user,
                               controller: usernameController,
-                              validator: (v) =>
-                                  v!.isEmpty ? "Required" : null,
+                              textInputAction: TextInputAction.next,
+                              validator: _required,
                             ),
                             const SizedBox(height: 14),
 
@@ -237,8 +288,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               hint: "Enter email",
                               icon: FontAwesomeIcons.envelope,
                               controller: emailController,
-                              validator: (v) =>
-                                  v!.isEmpty ? "Required" : null,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              validator: (v) {
+                                if (_required(v) != null) return "Required";
+                                return _emailPattern.hasMatch(v!.trim())
+                                    ? null
+                                    : "Enter a valid email address";
+                              },
                             ),
                             const SizedBox(height: 14),
 
@@ -247,8 +304,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               hint: "Enter contact number",
                               icon: FontAwesomeIcons.phone,
                               controller: contactController,
-                              validator: (v) =>
-                                  v!.isEmpty ? "Required" : null,
+                              keyboardType: TextInputType.phone,
+                              textInputAction: TextInputAction.next,
+                              validator: _required,
                             ),
                             const SizedBox(height: 14),
 
@@ -258,8 +316,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               icon: FontAwesomeIcons.lock,
                               controller: passwordController,
                               obscureText: true,
-                              validator: (v) =>
-                                  v!.isEmpty ? "Required" : null,
+                              textInputAction: TextInputAction.next,
+                              validator: (v) => (v == null || v.length < 6)
+                                  ? "At least 6 characters"
+                                  : null,
                             ),
                             const SizedBox(height: 14),
 
@@ -269,8 +329,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               icon: FontAwesomeIcons.lock,
                               controller: confirmPasswordController,
                               obscureText: true,
-                              validator: (v) =>
-                                  v!.isEmpty ? "Required" : null,
+                              textInputAction: TextInputAction.next,
+                              validator: _required,
                             ),
 
                             if (passwordError != null) ...[
@@ -301,8 +361,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               hint: "Enter country",
                               icon: FontAwesomeIcons.globe,
                               controller: countryController,
-                              validator: (v) =>
-                                  v!.isEmpty ? "Required" : null,
+                              textInputAction: TextInputAction.next,
+                              validator: _required,
                             ),
                             const SizedBox(height: 14),
 
@@ -311,8 +371,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               hint: "Enter province",
                               icon: FontAwesomeIcons.map,
                               controller: provinceController,
-                              validator: (v) =>
-                                  v!.isEmpty ? "Required" : null,
+                              textInputAction: TextInputAction.done,
+                              validator: _required,
                             ),
 
                             const SizedBox(height: 24),
@@ -329,21 +389,18 @@ const SizedBox(height: 18),
                             OutlinedButtonWidget(
                               text: "Cancel",
                               icon: FontAwesomeIcons.xmark,
-                              onPressed: () {
-                                context.push('/login');
-                              },
+                              onPressed: _backToLogin,
                             ),
 
                             const SizedBox(height: 18),
 
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 const Text("Already have an account? "),
                                 GestureDetector(
-                                  onTap: () {
-                                    context.push('/login');
-                                  },
+                                  onTap: _backToLogin,
                                   child: const Text(
                                     "Login here",
                                     style: TextStyle(

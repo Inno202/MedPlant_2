@@ -51,6 +51,7 @@ import 'package:medplant/services/database_service.dart';
 import 'package:medplant/services/cloudinary_service.dart';
 import 'package:medplant/services/location_service.dart';
 import 'package:medplant/services/auth_service.dart';
+import 'package:medplant/widgets/secondary_scaffold.dart';
 
 typedef SpeciesIdentificationResult = FullPipelineResult;
 
@@ -313,13 +314,14 @@ class _AddReportScreenState extends State<AddReportScreen> {
   // ── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7FAF8),
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 700),
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
+    return SecondaryScaffold(
+      title: "Submit Plant Report",
+      fallbackRoute: '/viewreports',
+      maxWidth: 700,
+      body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            keyboardDismissBehavior:
+                ScrollViewKeyboardDismissBehavior.onDrag,
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -550,8 +552,6 @@ class _AddReportScreenState extends State<AddReportScreen> {
                 ],
               ),
             ),
-          ),
-        ),
       ),
     );
   }
@@ -703,7 +703,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              "ML server not reachable.\nMake sure main.py is running on port 8000.\nPlease try again once the server is online.",
+              "Couldn't reach the plant identification service.\nCheck that the ML server is running and your phone is on the same network, then tap Retake to try again.",
               style: TextStyle(fontSize: 12),
             ),
           ),
@@ -862,6 +862,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
                         _imageBytes!,
                       );
 
+                      if (!mounted) return;
                       if (imageUrl == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -916,7 +917,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
                             ),
                           ),
                         );
-                        context.go('/viewreports');
+                        goBackOrHome(context, fallback: '/viewreports');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -951,7 +952,9 @@ class _AddReportScreenState extends State<AddReportScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(50)),
             ),
-            onPressed: () => context.go('/viewreports'),
+            onPressed: _submitting
+                ? null
+                : () => goBackOrHome(context, fallback: '/viewreports'),
             icon: const Icon(Icons.close, color: AppColors.primaryDark),
             label: Text("Cancel",
                 style: GoogleFonts.lato(color: AppColors.primaryDark)),

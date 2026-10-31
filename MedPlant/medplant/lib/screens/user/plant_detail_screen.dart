@@ -1,5 +1,11 @@
+// lib/screens/user/plant_detail_screen.dart
+// Detail page for a registered species (opened by tapping a species card).
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:medplant/constants/app_colors.dart';
+import 'package:medplant/widgets/responsive_wrap_grid.dart';
+import 'package:medplant/widgets/secondary_scaffold.dart';
 import '/models/plant_model.dart';
 
 class PlantDetailScreen extends StatelessWidget {
@@ -7,22 +13,21 @@ class PlantDetailScreen extends StatelessWidget {
 
   const PlantDetailScreen({super.key, required this.plant});
 
+  bool _has(String? v) => v != null && v.trim().isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          plant.name,
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: AppColors.primaryDark,
-      ),
+    return SecondaryScaffold(
+      title: plant.name,
+      maxWidth: 800,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 🔥 HEADER CARD
+            // ── Header card ─────────────────────────────────────────────
             Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -37,172 +42,202 @@ class PlantDetailScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  // 🔥 IMAGE
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
+                  AspectRatio(
+                    aspectRatio: 16 / 10,
                     child: Image.network(
-                      plant.imageUrl ?? '',
-                      height: 260,
+                      plant.imageUrl,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppColors.borderSoft,
-                          child: const Center(
-                            child: Icon(Icons.image_not_supported),
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null
+                              ? child
+                              : Container(
+                                  color: AppColors.accentBg,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                ),
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: AppColors.accentBg,
+                        child: const Center(
+                          child: Icon(Icons.eco,
+                              size: 56, color: AppColors.primarySoft),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+                    child: Column(
+                      children: [
+                        Text(
+                          plant.name,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryDark,
                           ),
-                        );
-                      },
+                        ),
+                        if (_has(plant.localName)) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            plant.localName!,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.dancingScript(
+                                fontSize: 18, color: AppColors.primary),
+                          ),
+                        ],
+                        if (_has(plant.family)) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            "${plant.family} family",
+                            style: const TextStyle(
+                                fontSize: 13, color: AppColors.textSecondary),
+                          ),
+                        ],
+                        if (_has(plant.conservationStatus)) ...[
+                          const SizedBox(height: 10),
+                          _pill(Icons.shield_outlined,
+                              plant.conservationStatus!),
+                        ],
+                      ],
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // 🔥 TITLE
-                  Text(
-                    plant.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text(
-                    "${plant.family} family",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.primary,
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
                 ],
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // 🔥 DESCRIPTION (InfoNote reuse)
             _infoSection(
-              icon: Icons.info,
+              icon: Icons.info_outline,
               title: "Description",
-              content: plant.description ?? "N/A",
+              content: _has(plant.description)
+                  ? plant.description!
+                  : "No description has been added yet.",
             ),
-
-            const SizedBox(height: 16),
-
-            // 🔥 MEDICINAL USES (InfoNote reuse)
+            const SizedBox(height: 14),
             _infoSection(
-              icon: Icons.medical_services,
+              icon: Icons.medical_services_outlined,
               title: "Medicinal Uses",
-              content: plant.medicinalUses ?? "N/A",
+              content: _has(plant.medicinalUses)
+                  ? plant.medicinalUses!
+                  : "No medicinal uses have been recorded yet.",
             ),
+            const SizedBox(height: 20),
 
-            const SizedBox(height: 16),
-
-            // 🔥 INFO GRID
-            _infoGrid(),
+            Text(
+              "Species Information",
+              style: GoogleFonts.montserrat(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primaryDark,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ResponsiveWrapGrid(
+              minItemWidth: 150,
+              spacing: 10,
+              children: [
+                _infoItem("Common Name", plant.commonName),
+                _infoItem("Local Name", plant.localName),
+                _infoItem("Family", plant.family),
+                _infoItem("Genus", plant.genus),
+                _infoItem("Parts Used", plant.partsUsed),
+                _infoItem("Harvesting Season", plant.harvestingSeason),
+                _infoItem("Location", plant.locationArea),
+                _infoItem("Conservation", plant.conservationStatus),
+              ],
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  // 🔥 InfoNote-style reusable section
+  Widget _pill(IconData icon, String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.accentBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.badgeBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.primary),
+            const SizedBox(width: 5),
+            Text(text,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryDark)),
+          ],
+        ),
+      );
+
   Widget _infoSection({
     required IconData icon,
     required String title,
     required String content,
   }) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.accentBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(
-            color: AppColors.primary,
-            width: 5,
-          ),
-        ),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        border: Border(left: BorderSide(color: AppColors.primary, width: 5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: AppColors.primary),
+              Icon(icon, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 15,
                   color: AppColors.primaryDark,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            content,
-            style: const TextStyle(height: 1.6),
-          ),
+          const SizedBox(height: 8),
+          Text(content,
+              style: const TextStyle(
+                  height: 1.6, color: AppColors.textPrimary, fontSize: 14)),
         ],
       ),
     );
   }
 
-  // 🔥 INFO GRID (matches web cards)
-  Widget _infoGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      childAspectRatio: 2.8,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      children: [
-        _infoItem("Common Name", plant.commonName ?? "N/A"),
-        _infoItem("Local Name", plant.localName ?? "N/A"),
-        _infoItem("Family", plant.family ?? "N/A"),
-        _infoItem("Genus", plant.genus ?? "N/A"),
-        _infoItem("Parts Used", plant.partsUsed ?? "N/A"),
-        _infoItem("Species ID", plant.speciesId ?? "N/A"),
-      ],
-    );
-  }
-
-  Widget _infoItem(String label, String value) {
+  Widget _infoItem(String label, String? value) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.borderSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.grey,
-            ),
-          ),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11, color: AppColors.textSecondary)),
           const SizedBox(height: 4),
           Text(
-            value,
+            _has(value) ? value! : "—",
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 13,
+              color: AppColors.primaryDark,
             ),
           ),
         ],

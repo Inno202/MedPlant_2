@@ -18,6 +18,7 @@ class ReportCard extends StatelessWidget {
   final String date;
   final String environment;
   final String description;
+  final String? species;
 
   const ReportCard({
     super.key,
@@ -27,6 +28,7 @@ class ReportCard extends StatelessWidget {
     required this.date,
     required this.environment,
     required this.description,
+    this.species,
   });
 
   Widget _buildImage() {
@@ -87,6 +89,9 @@ class ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 3,
+      margin: EdgeInsets.zero,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -128,10 +133,14 @@ class ReportCard extends StatelessWidget {
                   const Icon(Icons.calendar_today,
                       size: 11, color: AppColors.textSecondary),
                   const SizedBox(width: 3),
-                  Text(
-                    date,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.textSecondary),
+                  Expanded(
+                    child: Text(
+                      date,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.textSecondary),
+                    ),
                   ),
                 ]),
 
@@ -142,6 +151,12 @@ class ReportCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
+                    if (species != null && species!.isNotEmpty)
+                      _Badge(
+                        label: species!,
+                        color: AppColors.primaryDark,
+                        icon: Icons.eco,
+                      ),
                     _Badge(
                       label: environment,
                       color: AppColors.primary,
@@ -237,13 +252,17 @@ class _Badge extends StatelessWidget {
             Icon(icon, size: 10, color: color),
             const SizedBox(width: 3),
           ],
-          Text(
+          Flexible(
+            child: Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 10,
               color: color,
               fontWeight: FontWeight.w600,
             ),
+          ),
           ),
         ],
       ),

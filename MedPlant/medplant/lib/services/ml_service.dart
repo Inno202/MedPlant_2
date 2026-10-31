@@ -183,12 +183,21 @@ class LeafHealthResult {
 
 // ── Service ───────────────────────────────────────────────────────────────────
 class MLService {
-  // Change to ngrok URL when running on a physical device.
-  // static const String _baseUrl = 'http://localhost:8000';
-  // static const Duration _timeout = Duration(seconds: 30);
-
+  // ── Server address ─────────────────────────────────────────────────────
+  // Hosted Render server (default). The free tier sleeps when idle and takes
+  // about 60 seconds to wake, hence the 60-second timeout.
   static const String _baseUrl = 'https://medplant-ml-server.onrender.com';
   static const Duration _timeout = Duration(seconds: 60);
+
+  // Local ML server (backup if Render is offline, e.g. during a presentation).
+  // To switch: comment out the two Render lines above and uncomment these,
+  // then start the server with: uvicorn main:app --host 0.0.0.0 --port 8000
+  //   - Chrome / Windows build on the laptop: localhost works as is.
+  //   - Android emulator: use http://10.0.2.2:8000
+  //   - Real phone on the same Wi-Fi: use the laptop's IP, e.g. http://192.168.1.20:8000
+  //     (or keep localhost and run: adb reverse tcp:8000 tcp:8000)
+  // static const String _baseUrl = 'http://localhost:8000';
+  // static const Duration _timeout = Duration(seconds: 30);
 
   // ── AddReportScreen: F1+F2+F3 from raw image bytes ───────────────────────
   static Future<FullPipelineResult?> runFullPipelineFromBytes(
@@ -290,7 +299,7 @@ class MLService {
     try {
       final response = await http
           .get(Uri.parse('$_baseUrl/health'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(_timeout); // long enough for a Render cold start
       return response.statusCode == 200;
     } catch (_) {
       return false;

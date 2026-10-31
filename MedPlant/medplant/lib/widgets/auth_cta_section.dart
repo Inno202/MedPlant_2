@@ -12,7 +12,11 @@ class AuthCTASection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      color: AppColors.accentBg,
+      decoration: BoxDecoration(
+        color: AppColors.accentBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderSoft),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -26,7 +30,7 @@ class AuthCTASection extends StatelessWidget {
             "Join Our Community",
             textAlign: TextAlign.center,
             style: GoogleFonts.montserrat(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: AppColors.primaryDark,
             ),
@@ -41,12 +45,13 @@ class AuthCTASection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 10,
             children: [
               ElevatedButton.icon(
-                onPressed: () { 
-                          context.push('/login');},
+                onPressed: () => context.push('/login'),
                 icon: const Icon(Icons.login, color: AppColors.white),
                 label: Text(
                   "Login",
@@ -64,10 +69,8 @@ class AuthCTASection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8)),
                 ),
               ),
-              const SizedBox(width: 12),
               OutlinedButton.icon(
-                onPressed: () {{ 
-                          context.push('/register');}},
+                onPressed: () => context.push('/register'),
                 icon: const Icon(Icons.person_add, color: AppColors.primary),
                 label: Text(
                   "Register",

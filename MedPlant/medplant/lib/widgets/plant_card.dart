@@ -5,6 +5,7 @@
 // and harvesting season — no "Read More" tap-through needed.
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/plant_model.dart';
 import '../constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -48,9 +49,15 @@ class PlantCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 3,
+      margin: EdgeInsets.zero,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      clipBehavior: Clip.antiAlias,
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
+      child: InkWell(
+        onTap: () => context.push('/plantdetail', extra: plant),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -153,11 +160,15 @@ class PlantCard extends StatelessWidget {
                     const Icon(Icons.account_tree_outlined,
                         size: 11, color: AppColors.textSecondary),
                     const SizedBox(width: 3),
-                    Text(
-                      plant.family!,
-                      style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary),
+                    Expanded(
+                      child: Text(
+                        plant.family!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary),
+                      ),
                     ),
                   ]),
                 ],
@@ -250,10 +261,29 @@ class PlantCard extends StatelessWidget {
                     ],
                   ),
                 ],
+
+                const SizedBox(height: 10),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      "View details",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(Icons.chevron_right,
+                        size: 16, color: AppColors.primary),
+                  ],
+                ),
               ],
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -325,13 +355,17 @@ class _Badge extends StatelessWidget {
             Icon(icon, size: 10, color: color),
             const SizedBox(width: 3),
           ],
-          Text(
+          Flexible(
+            child: Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 10,
               color: color,
               fontWeight: FontWeight.w600,
             ),
+          ),
           ),
         ],
       ),

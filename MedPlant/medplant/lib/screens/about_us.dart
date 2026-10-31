@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:medplant/models/aboutmodel.dart';
 import '../constants/app_colors.dart';
 
-import '../widgets/section_header.dart';
 import '../widgets/badge_chip.dart';
 import '../widgets/info_note_about.dart';
+import '../widgets/secondary_scaffold.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -21,32 +21,24 @@ class AboutScreen extends StatelessWidget {
     // badges row
     final List<Map<String, dynamic>> badges = [
       {'icon': FontAwesomeIcons.leaf, 'text': 'Indigenous Knowledge'},
-      {'icon': FontAwesomeIcons.mobileAlt, 'text': 'ICT Integration'},
+      {'icon': FontAwesomeIcons.mobileScreenButton, 'text': 'ICT Integration'},
       // {'icon': FontAwesomeIcons.heart, 'text': 'Conservation'},
       {'icon': FontAwesomeIcons.users, 'text': 'Community Based'},
       {'icon': FontAwesomeIcons.chartLine, 'text': 'Monitoring'},
     ];
 
-    return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('About MedPlants'),
-      //   backgroundColor: AppColors.primaryDark,
-      //   centerTitle: true,
-      // ),
+    return SecondaryScaffold(
+      title: 'About MedPlant',
+      maxWidth: 800,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section header
-            const SectionHeader(
-              title: 'About MedPlants',
-            ),
-            const SizedBox(height: 16),
 
             // About card
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -103,7 +95,7 @@ class AboutScreen extends StatelessWidget {
                       height: 1.7,
                       color: AppColors.textPrimary,
                     ),
-                    textAlign: TextAlign.justify,
+                    textAlign: TextAlign.start,
                   ),
                   const SizedBox(height: 12),
 
@@ -115,7 +107,7 @@ class AboutScreen extends StatelessWidget {
                       height: 1.7,
                       color: AppColors.textPrimary,
                     ),
-                    textAlign: TextAlign.justify,
+                    textAlign: TextAlign.start,
                   ),
                   const SizedBox(height: 16),
 
@@ -130,7 +122,7 @@ class AboutScreen extends StatelessWidget {
                       height: 1.7,
                       color: AppColors.textPrimary,
                     ),
-                    textAlign: TextAlign.justify,
+                    textAlign: TextAlign.start,
                   ),
                   const SizedBox(height: 16),
 

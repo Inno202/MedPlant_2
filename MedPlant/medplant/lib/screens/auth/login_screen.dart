@@ -3,10 +3,10 @@
 // On success: fetches role from Firestore → navigates to /home
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:medplant/providers/navigation_provider.dart';
 import 'package:provider/provider.dart';
 import '/constants/app_colors.dart';
 import '/widgets/custom_text_field.dart';
@@ -37,6 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> handleLogin() async {
+    FocusScope.of(context).unfocus();
+    if (emailController.text.trim().isEmpty ||
+        passwordController.text.isEmpty) {
+      setState(() => _error = 'Please enter your email and password.');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -52,7 +58,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (result['success'] == true) {
       final userProvider = context.read<UserProvider>();
-      final navProvider = context.read<NavigationProvider>();
 
       userProvider.loginWithDetails(
         role: result['role'] as UserRole,
@@ -60,8 +65,13 @@ class _LoginScreenState extends State<LoginScreen> {
         username: result['username'],
         email: result['email'],
       );
-      navProvider.configureRoutes(result['role'] as UserRole);
-      context.go('/home');
+      // Return to the page that asked for login (e.g. Submit Report), or
+      // Home if login was opened directly.
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/home');
+      }
     } else {
       setState(() => _error = result['error']);
     }
@@ -71,12 +81,36 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.go('/home');
+      },
+      child: Scaffold(
       backgroundColor: AppColors.accentBg,
-      body: Center(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.primaryDark,
+        iconTheme: const IconThemeData(color: AppColors.primaryDark),
+        systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: Colors.transparent,
+        ),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/home'),
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: Center(
         child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: Container(
-            width: size.width * 0.85,
+            width: size.width * 0.9,
             constraints: const BoxConstraints(maxWidth: 480),
             decoration: BoxDecoration(
               color: AppColors.white,
@@ -94,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Header
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
                   decoration: BoxDecoration(
                     color: AppColors.accentBg,
                     borderRadius: const BorderRadius.vertical(
@@ -115,6 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       Text(
                         'MedPlant · Thaba-Nchu',
+                        textAlign: TextAlign.center,
                         style: GoogleFonts.montserrat(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
@@ -164,6 +199,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         hint: 'Enter your email',
                         icon: Icons.email,
                         controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.email],
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
@@ -172,6 +210,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         icon: Icons.lock,
                         obscureText: true,
                         controller: passwordController,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.password],
+                        onSubmitted: (_) {
+                          if (!_loading) handleLogin();
+                        },
                       ),
                       const SizedBox(height: 24),
 
@@ -191,23 +234,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () => context.push('/register'),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Don't have an account? "),
-                          GestureDetector(
-                            onTap: () => context.push('/register'),
-                            child: const Text(
-                              "Register here",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
+                      TextButton(
+                        onPressed: () => context.go('/home'),
+                        child: const Text(
+                          "Continue as guest",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -216,6 +253,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+      ),
       ),
     );
   }

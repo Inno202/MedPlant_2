@@ -32,7 +32,12 @@ class UserProvider extends ChangeNotifier {
 
   // ── Restore session from Firebase on app start ───────────────────────────
   Future<void> _restoreSession() async {
-    final firebaseUser = AuthService.currentUser;
+    // Wait for Firebase to finish restoring any persisted session. On the
+    // web `currentUser` is still null right after start-up, so reading it
+    // directly logged users out on every refresh.
+    final firebaseUser = await AuthService.authStateChanges.first
+        .timeout(const Duration(seconds: 8), onTimeout: () => AuthService.currentUser)
+        .catchError((_) => AuthService.currentUser);
     if (firebaseUser != null) {
       final profile = await AuthService.getUserProfile(firebaseUser.uid);
       if (profile != null) {
@@ -77,13 +82,21 @@ class UserProvider extends ChangeNotifier {
 
     _isLoggedIn = true;
 
-    debugPrint("Logged in user:");
-    debugPrint("UID: $uid");
-    debugPrint("Username: $username");
-    debugPrint("Email: $email");
-    debugPrint("Role: ${role.name}");
 
     notifyListeners();
+  }
+
+  /// Signs out of Firebase AND clears local session state. Use this for
+  /// every Logout button — clearing only the role (the old behaviour)
+  /// left the Firebase session alive, so the user was silently logged
+  /// back in on the next app start.
+  Future<void> signOut() async {
+    try {
+      await AuthService.logout();
+    } catch (e) {
+      debugPrint('Sign-out failed: $e');
+    }
+    logout();
   }
 
   void logout() {
@@ -101,6 +114,13 @@ class UserProvider extends ChangeNotifier {
 
   void setRole(UserRole? newRole) {
     _role = newRole;
+    _isLoggedIn = newRole != null;
+    notifyListeners();
+  }
+
+  /// Updates the cached username after the user edits their profile.
+  void updateUsername(String username) {
+    _username = username;
     notifyListeners();
   }
 }

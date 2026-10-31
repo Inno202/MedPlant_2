@@ -113,7 +113,7 @@ class AdminDashboardScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // ── Top damage types ───────────────────────────────────────
-            _sectionTitle("Dominant Damage Types (All Submissions)"),
+            _sectionTitle("Dominant Damage Types"),
             const SizedBox(height: 10),
             _LiveDamageBreakdown(),
             const SizedBox(height: 24),
@@ -1659,6 +1659,12 @@ class _LiveAlertsList extends StatelessWidget {
 // Live health table (inline on dashboard)
 // ─────────────────────────────────────────────────────────────────────────────
 class _LiveHealthTable extends StatelessWidget {
+  // Counts and statuses use the same rules as the ML Predictions screen:
+  //   - only visible reports (approved, or legacy docs with no reviewStatus);
+  //   - the latest ML result for each report (ml_predictions/{reportId}) when
+  //     it exists, otherwise the result stored on the report at submission;
+  //   - Status = Stressed when at least half the reports are Stressed;
+  //   - Trend = Declining when 3+ reports decline or 60%+ are Stressed.
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
@@ -1674,144 +1680,133 @@ class _LiveHealthTable extends StatelessWidget {
         return StreamBuilder<QuerySnapshot>(
           stream: _db.collection('plant_reports').snapshots(),
           builder: (context, reportsSnap) {
-            final reports = reportsSnap.data?.docs ?? [];
+            return StreamBuilder<QuerySnapshot>(
+              stream: _db.collection('ml_predictions').snapshots(),
+              builder: (context, predSnap) {
+                final reports = reportsSnap.data?.docs ?? [];
+                final predictions = <String, Map<String, dynamic>>{
+                  for (final p in predSnap.data?.docs ?? [])
+                    p.id: p.data() as Map<String, dynamic>,
+                };
 
-            // Build per-species stats from reports
-            Map<String, Map<String, dynamic>> statsMap = {};
-            for (final doc in reports) {
-              final d = doc.data() as Map<String, dynamic>;
-              final name = d['speciesName'] ?? '';
-              if (name.isEmpty) continue;
-              statsMap.putIfAbsent(
-                  name, () => {'count': 0, 'health': [], 'trend': []});
-              statsMap[name]!['count'] =
-                  (statsMap[name]!['count'] as int) + 1;
-              if (d['healthStatus'] != null) {
-                (statsMap[name]!['health'] as List)
-                    .add(d['healthStatus']);
-              }
-              if (d['trendDirection'] != null) {
-                (statsMap[name]!['trend'] as List)
-                    .add(d['trendDirection']);
-              }
-            }
+                // Per-species stats from visible reports only
+                final statsMap = <String, _SpeciesStats>{};
+                for (final doc in reports) {
+                  final d = doc.data() as Map<String, dynamic>;
+                  if (!DatabaseService.isReportVisible(d)) continue;
+                  final name = (d['speciesName'] ?? '') as String;
+                  if (name.isEmpty) continue;
+                  final pred = predictions[doc.id];
+                  final health = (pred?['health_status'] ?? d['healthStatus'])
+                      as String?;
+                  final trend = (pred?['trend_direction'] ??
+                      d['trendDirection']) as String?;
+                  final st = statsMap.putIfAbsent(name, () => _SpeciesStats());
+                  st.count++;
+                  if (health == 'Stressed') st.stressed++;
+                  if (health == 'Healthy') st.healthy++;
+                  if (trend == 'Declining') st.declining++;
+                }
 
-            // NOTE: 'Degraded' branch kept only as a defensive fallback for
-            // any legacy documents written before the F2 architecture was
-            // simplified to binary Healthy/Stressed. New documents will
-            // never contain this value.
-            Color statusColor(String s) {
-              if (s == 'Healthy') return const Color(0xFF27AE60);
-              if (s == 'Degraded') return const Color(0xFFE74C3C);
-              return const Color(0xFFF39C12);
-            }
+                Color statusColor(String s) {
+                  if (s == 'Healthy') return const Color(0xFF27AE60);
+                  if (s == 'Stressed') return const Color(0xFFF39C12);
+                  return Colors.grey;
+                }
 
-            Color trendColor(String t) {
-              if (t == 'Improving') return const Color(0xFF27AE60);
-              if (t == 'Declining') return const Color(0xFFE74C3C);
-              return Colors.grey;
-            }
+                Color trendColor(String t) {
+                  if (t == 'Improving') return const Color(0xFF27AE60);
+                  if (t == 'Declining') return const Color(0xFFE74C3C);
+                  return Colors.grey;
+                }
 
-            String dominantValue(List items) {
-              if (items.isEmpty) return '—';
-              final freq = <String, int>{};
-              for (final v in items) {
-                freq[v as String] = (freq[v] ?? 0) + 1;
-              }
-              return freq.entries
-                  .reduce((a, b) => a.value >= b.value ? a : b)
-                  .key;
-            }
-
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.borderSoft),
-              ),
-              child: Column(
-                children: [
-                  // Header
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: const BoxDecoration(
-                      color: AppColors.accentBg,
-                      borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(14)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Expanded(
-                            flex: 3,
-                            child: Text("Species",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12))),
-                        Expanded(
-                            child: Text("Reports",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12))),
-                        Expanded(
-                            child: Text("Status",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12))),
-                        Expanded(
-                            child: Text("Trend",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12))),
-                      ],
-                    ),
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.borderSoft),
                   ),
-
-                  ...species.map((doc) {
-                    final d = doc.data() as Map<String, dynamic>;
-                    final name = d['name'] ?? '—';
-                    final stats = statsMap[name] ??
-                        {'count': 0, 'health': [], 'trend': []};
-                    final count = stats['count'] as int;
-                    final health = dominantValue(stats['health'] as List);
-                    final trend = dominantValue(stats['trend'] as List);
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: const BoxDecoration(
-                        border: Border(
-                            top: BorderSide(
-                                color: AppColors.borderSoft)),
+                  child: Column(
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: const BoxDecoration(
+                          color: AppColors.accentBg,
+                          borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(14)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Expanded(
+                                flex: 3,
+                                child: Text("Species",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12))),
+                            Expanded(
+                                child: Text("Reports",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12))),
+                            Expanded(
+                                child: Text("Status",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12))),
+                            Expanded(
+                                child: Text("Trend",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12))),
+                          ],
+                        ),
                       ),
-                      child: Row(children: [
-                        Expanded(
-                            flex: 3,
-                            child: Text(name,
-                                style:
-                                    const TextStyle(fontSize: 12))),
-                        Expanded(
-                            child: Text("$count",
-                                style:
-                                    const TextStyle(fontSize: 12))),
-                        Expanded(
-                          child: Text(health,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: statusColor(health))),
-                        ),
-                        Expanded(
-                          child: Text(trend,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: trendColor(trend))),
-                        ),
-                      ]),
-                    );
-                  }),
-                ],
-              ),
+
+                      ...species.map((doc) {
+                        final d = doc.data() as Map<String, dynamic>;
+                        final name = (d['name'] ?? '—') as String;
+                        final st = statsMap[name] ?? _SpeciesStats();
+                        final health = st.overallHealth;
+                        final trend = st.overallTrend;
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                                top: BorderSide(
+                                    color: AppColors.borderSoft)),
+                          ),
+                          child: Row(children: [
+                            Expanded(
+                                flex: 3,
+                                child: Text(name,
+                                    style: const TextStyle(fontSize: 12))),
+                            Expanded(
+                                child: Text("${st.count}",
+                                    style: const TextStyle(fontSize: 12))),
+                            Expanded(
+                              child: Text(health,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor(health))),
+                            ),
+                            Expanded(
+                              child: Text(trend,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: trendColor(trend))),
+                            ),
+                          ]),
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              },
             );
           },
         );
@@ -1820,10 +1815,60 @@ class _LiveHealthTable extends StatelessWidget {
   }
 }
 
+/// Per-species tallies for the health summary table.
+class _SpeciesStats {
+  int count = 0;
+  int healthy = 0;
+  int stressed = 0;
+  int declining = 0;
+
+  int get classified => healthy + stressed;
+
+  /// Same rule as the ML Predictions screen (_overallHealth).
+  String get overallHealth {
+    if (classified == 0) return '—';
+    return stressed >= classified * 0.5 ? 'Stressed' : 'Healthy';
+  }
+
+  /// Same rule as the ML Predictions screen (_overallTrend).
+  String get overallTrend {
+    if (classified == 0) return '—';
+    if (declining >= 3 || stressed >= classified * 0.6) return 'Declining';
+    if (healthy >= classified * 0.6) return 'Stable';
+    return stressed > healthy ? 'Declining' : 'Stable';
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Live damage breakdown (inline on dashboard)
+// Live damage breakdown (inline on dashboard) — filter: Approved / All
 // ─────────────────────────────────────────────────────────────────────────────
-class _LiveDamageBreakdown extends StatelessWidget {
+class _LiveDamageBreakdown extends StatefulWidget {
+  @override
+  State<_LiveDamageBreakdown> createState() => _LiveDamageBreakdownState();
+}
+
+class _LiveDamageBreakdownState extends State<_LiveDamageBreakdown> {
+  /// true = approved (visible) reports only; false = every submission,
+  /// including pending and declined ones.
+  bool _approvedOnly = true;
+
+  Widget _filterChip(String label, bool value) {
+    final selected = _approvedOnly == value;
+    return ChoiceChip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      selected: selected,
+      selectedColor: AppColors.accentBg,
+      side: BorderSide(
+          color: selected ? AppColors.primary : AppColors.borderSoft),
+      labelStyle: TextStyle(
+        color: selected ? AppColors.primaryDark : AppColors.textSecondary,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      showCheckmark: false,
+      onSelected: (_) => setState(() => _approvedOnly = value),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
@@ -1831,8 +1876,11 @@ class _LiveDamageBreakdown extends StatelessWidget {
       builder: (context, snap) {
         final docs = snap.data?.docs ?? [];
         final freq = <String, int>{};
+        var reportCount = 0;
         for (final doc in docs) {
           final d = doc.data() as Map<String, dynamic>;
+          if (_approvedOnly && !DatabaseService.isReportVisible(d)) continue;
+          reportCount++;
           final labels = d['damageLabels'];
           if (labels is List) {
             for (final l in labels) {
@@ -1841,13 +1889,9 @@ class _LiveDamageBreakdown extends StatelessWidget {
           }
         }
 
-        if (freq.isEmpty) {
-          return _emptyState("No damage data yet.");
-        }
-
         final sorted = freq.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
-        final max = sorted.first.value.toDouble();
+        final max = sorted.isEmpty ? 1.0 : sorted.first.value.toDouble();
 
         return Container(
           padding: const EdgeInsets.all(14),
@@ -1857,44 +1901,68 @@ class _LiveDamageBreakdown extends StatelessWidget {
             border: Border.all(color: AppColors.borderSoft),
           ),
           child: Column(
-            children: sorted.take(6).map((e) {
-              final ratio = e.value / max;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _filterChip("Approved", true),
+                  const SizedBox(width: 8),
+                  _filterChip("All", false),
+                  const Spacer(),
+                  Text("$reportCount report${reportCount == 1 ? '' : 's'}",
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.textSecondary)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (sorted.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Text("No damage data yet.",
+                        style: TextStyle(
+                            fontSize: 13, color: AppColors.textSecondary)),
+                  ),
+                )
+              else
+                ...sorted.take(6).map((e) {
+                  final ratio = e.value / max;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(e.key,
-                            style: const TextStyle(fontSize: 12)),
-                        Text("${e.value}",
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(e.key, style: const TextStyle(fontSize: 12)),
+                            Text("${e.value}",
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: ratio,
+                            minHeight: 6,
+                            backgroundColor: AppColors.accentBg,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              ratio >= 0.7
+                                  ? const Color(0xFFE74C3C)
+                                  : ratio >= 0.4
+                                      ? const Color(0xFFF39C12)
+                                      : AppColors.primary,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: ratio,
-                        minHeight: 6,
-                        backgroundColor: AppColors.accentBg,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          ratio >= 0.7
-                              ? const Color(0xFFE74C3C)
-                              : ratio >= 0.4
-                                  ? const Color(0xFFF39C12)
-                                  : AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  );
+                }),
+            ],
           ),
         );
       },

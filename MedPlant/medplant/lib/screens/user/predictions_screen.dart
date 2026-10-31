@@ -117,6 +117,11 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
 
   List<_AnalysedReport> _items = [];
 
+  /// Bumped on every (re)load. A pull-to-refresh while the previous run is
+  /// still analysing used to keep writing into the new list by index,
+  /// which could throw a RangeError or show results on the wrong card.
+  int _runId = 0;
+
   // ── Firestore: fetch reports ───────────────────────────────────────────────
   Future<List<_PlantReport>> _fetchPlantReports() async {
     final snapshot = await FirebaseFirestore.instance
@@ -181,6 +186,9 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
   }
 
   Future<void> _loadAndAnalyse() async {
+    final runId = ++_runId;
+    bool stale() => !mounted || runId != _runId;
+    if (!mounted) return;
     setState(() {
       _loadingReports = true;
       _loadError = null;
@@ -190,14 +198,16 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     try {
       reports = await _fetchPlantReports();
     } catch (e) {
-      if (mounted) {
+      if (!stale()) {
         setState(() {
           _loadingReports = false;
-          _loadError = 'Could not load reports: $e';
+          _loadError =
+              'Could not load reports. Please check your connection and pull down to retry.';
         });
       }
       return;
     }
+    if (stale()) return;
 
     // Seed items as loading
     if (mounted) {
@@ -214,13 +224,15 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     final priorScoresList = <double>[];
 
     for (int i = 0; i < _items.length; i++) {
+      if (stale()) return;
       final item = _items[i];
 
       // Check cache first
       final cached = await _fetchCachedPrediction(item.report.id);
+      if (stale()) return;
       if (cached != null) {
         priorScoresList.add(cached.trendScore);
-        if (mounted) {
+        if (!stale()) {
           setState(() {
             _items[i] = item.copyWith(analysis: cached, loading: false);
           });
@@ -242,17 +254,18 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         );
       }
 
+      if (stale()) return;
       if (result != null) {
         priorScoresList.add(result.trendScore);
         await _savePrediction(
             item.report.id, item.report.date, item.report.environment, result);
-        if (mounted) {
+        if (!stale()) {
           setState(() {
             _items[i] = item.copyWith(analysis: result, loading: false);
           });
         }
       } else {
-        if (mounted) {
+        if (!stale()) {
           setState(() {
             _items[i] = item.copyWith(loading: false, failed: true);
           });
@@ -302,13 +315,19 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FAF8),
+      backgroundColor: AppColors.pageBg,
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: _loadAndAnalyse,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.symmetric(
+            vertical: 16,
+            // Centre the content on wide screens (tablet / web).
+            horizontal: MediaQuery.sizeOf(context).width > 900
+                ? (MediaQuery.sizeOf(context).width - 868) / 2
+                : 16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -418,7 +437,7 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
           child: Text(
             _serverOnline
                 ? "ML server online · Leaf health Classification + Trend Analysis active"
-                : "ML server offline · Analyses will be skipped — start uvicorn on port 8000",
+                : "ML server offline · New analyses are paused. Saved results are still shown.",
             style: TextStyle(
               fontSize: 12,
               color: _serverOnline
@@ -430,7 +449,9 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
         GestureDetector(
           onTap: () {
             setState(() => _checkingServer = true);
-            _checkServer();
+            _checkServer().then((_) {
+              if (mounted && _serverOnline) _loadAndAnalyse();
+            });
           },
           child:
               const Icon(Icons.refresh, size: 16, color: AppColors.textSecondary),

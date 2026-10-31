@@ -24,12 +24,14 @@
 // approved everywhere else in the app — see isReportVisible). Pending and
 // Declined use a plain single-field query — no composite index needed.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:medplant/services/database_service.dart';
 import 'package:medplant/widgets/detailed_report_card.dart';
-import 'package:medplant/widgets/section_header.dart';
+import 'package:medplant/widgets/secondary_scaffold.dart';
 import '/constants/app_colors.dart';
 
 /// The single species this system currently monitors — matches
@@ -70,6 +72,41 @@ class ApproveReportsScreen extends StatefulWidget {
 class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
   _ReviewFilter _filter = _ReviewFilter.pending;
 
+  // Live data for every tab, kept in state. Previously new Firestore
+  // streams were created inside build() on every rebuild, which made the
+  // tab counts flicker to "···" and the list flash its spinner.
+  final Map<_ReviewFilter, List<QueryDocumentSnapshot>?> _docs = {};
+  final Map<_ReviewFilter, Object?> _errors = {};
+  final List<StreamSubscription> _subs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    for (final f in _ReviewFilter.values) {
+      _subs.add(DatabaseService.getReviewTabDocsStream(f.status).listen(
+        (docs) {
+          if (!mounted) return;
+          setState(() {
+            _docs[f] = docs;
+            _errors[f] = null;
+          });
+        },
+        onError: (e) {
+          if (!mounted) return;
+          setState(() => _errors[f] = e);
+        },
+      ));
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final s in _subs) {
+      s.cancel();
+    }
+    super.dispose();
+  }
+
   void _changeFilter(_ReviewFilter f) {
     if (f == _filter) return;
     setState(() => _filter = f);
@@ -80,10 +117,17 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
   /// feed. No text entry — this is a yes/no confirmation, not a data-entry
   /// step.
   Future<void> _approve(String docId) async {
-    await DatabaseService.approveReport(
-      docId,
-      confirmedSpeciesName: kMonitoredSpeciesName,
-    );
+    try {
+      await DatabaseService.approveReport(
+        docId,
+        confirmedSpeciesName: kMonitoredSpeciesName,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Couldn't approve the report. Please try again.")));
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -126,7 +170,14 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
 
     if (confirmed != true) return;
 
-    await DatabaseService.declineReport(docId);
+    try {
+      await DatabaseService.declineReport(docId);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Couldn't update the report. Please try again.")));
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -154,11 +205,14 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: StreamBuilder<List<QueryDocumentSnapshot>>(
-        stream: DatabaseService.getReviewTabDocsStream(_filter.status),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+    return SecondaryScaffold(
+      title: "Report Review",
+      fallbackRoute: '/viewreports',
+      body: Builder(
+        builder: (context) {
+          final error = _errors[_filter];
+          final data = _docs[_filter];
+          if (error == null && data == null) {
             return Column(
               children: [
                 _buildHeader(),
@@ -170,7 +224,7 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
             );
           }
 
-          if (snapshot.hasError) {
+          if (error != null) {
             return Column(
               children: [
                 _buildHeader(),
@@ -192,7 +246,7 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "${snapshot.error}",
+                            "Please check your connection and try again.",
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                                 fontSize: 12, color: Colors.grey),
@@ -208,7 +262,7 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
 
           // Client-side sort — newest first — since the query has no
           // .orderBy() (avoids needing a composite index).
-          final docs = [...snapshot.data ?? <QueryDocumentSnapshot>[]];
+          final docs = [...(data ?? const <QueryDocumentSnapshot>[])];
           docs.sort((a, b) {
             final aTs = (a.data() as Map<String, dynamic>)['submittedAt']
                 as Timestamp?;
@@ -283,12 +337,7 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
   }
 
   // ── Header ────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
-    return const Padding(
-      padding: EdgeInsets.only(left: 16, top: 8),
-      child: SectionHeader(title: "Report Review"),
-    );
-  }
+  Widget _buildHeader() => const SizedBox(height: 12);
 
   // ── Filter tabs — Pending / Approved / Declined, each with a live count ──
   Widget _buildFilterTabs() {
@@ -332,10 +381,9 @@ class _ApproveReportsScreenState extends State<ApproveReportsScreen> {
                 ),
               ),
               const SizedBox(height: 2),
-              StreamBuilder<List<QueryDocumentSnapshot>>(
-                stream: DatabaseService.getReviewTabDocsStream(f.status),
-                builder: (context, snap) {
-                  final count = snap.data?.length;
+              Builder(
+                builder: (context) {
+                  final count = _docs[f]?.length;
                   return Text(
                     count == null ? '···' : '$count',
                     style: TextStyle(

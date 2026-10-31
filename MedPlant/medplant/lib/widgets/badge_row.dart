@@ -27,7 +27,8 @@ class BadgeRow extends StatelessWidget {
       // Calculate width dynamically including spacing
       final spacing = 12.0;
       final totalSpacing = spacing * (badgesPerRow - 1);
-      final badgeWidth = (screenWidth - totalSpacing) / badgesPerRow;
+      final badgeWidth =
+          ((screenWidth - totalSpacing) / badgesPerRow).floorToDouble();
 
       return Wrap(
         spacing: spacing,
