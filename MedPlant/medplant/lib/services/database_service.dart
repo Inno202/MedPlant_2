@@ -240,6 +240,10 @@ class DatabaseService {
   }
 
   // ── Health history ─────────────────────────────────────────────────────────
+  /// Earlier F2 stress scores for [speciesName], OLDEST FIRST, for F3's trend.
+  /// Uses the 10 most recent visible (approved) reports. Each report's real
+  /// F2 score comes from its ml_predictions document (trend_score); a report
+  /// not analysed there yet falls back to 0.6 (Stressed) or 0.2 (Healthy).
   static Future<String> getPriorScores(String speciesName) async {
     try {
       final snapshot = await _db
@@ -250,11 +254,25 @@ class DatabaseService {
           .limit(10)
           .get();
 
-      final scores = snapshot.docs.map((doc) {
-        final health = doc['healthStatus'] ?? 'Healthy';
-        return health == 'Stressed' ? '0.6' : '0.2';
-      }).toList();
+      final docs = snapshot.docs
+          .where((d) => isReportVisible(d.data()))
+          .toList()
+          .reversed // oldest → newest, so the slope runs forward in time
+          .toList();
 
+      final predictions = await Future.wait(docs.map(
+          (d) => _db.collection('ml_predictions').doc(d.id).get()));
+
+      final scores = <String>[];
+      for (var i = 0; i < docs.length; i++) {
+        final cached = predictions[i].data()?['trend_score'];
+        if (cached is num) {
+          scores.add(cached.toDouble().toStringAsFixed(4));
+        } else {
+          final health = docs[i].data()['healthStatus'] ?? 'Healthy';
+          scores.add(health == 'Stressed' ? '0.6' : '0.2');
+        }
+      }
       return scores.join(',');
     } catch (e) {
       return '';

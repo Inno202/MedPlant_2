@@ -122,6 +122,14 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
   /// which could throw a RangeError or show results on the wrong card.
   int _runId = 0;
 
+  /// Marks ml_predictions documents whose F3 trend was computed with prior
+  /// scores in time order (oldest first). Older cached results lack it and
+  /// are recomputed.
+  static const String _f3Order = 'oldest_first_v2';
+
+  /// F3 uses at most this many earlier scores (the most recent ones).
+  static const int _f3Window = 10;
+
   // ── Firestore: fetch reports ───────────────────────────────────────────────
   Future<List<_PlantReport>> _fetchPlantReports() async {
     final snapshot = await FirebaseFirestore.instance
@@ -146,7 +154,10 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
           .collection('ml_predictions')
           .doc(reportId)
           .get();
-      if (doc.exists && doc.data() != null) {
+      // Results saved before F3 was fed oldest-first are recomputed once.
+      if (doc.exists &&
+          doc.data() != null &&
+          doc.data()!['f3_order'] == _f3Order) {
         return ContextualAnalysisResult.fromJson(doc.data()!);
       }
     } catch (e) {
@@ -162,7 +173,10 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
       await FirebaseFirestore.instance
           .collection('ml_predictions')
           .doc(reportId)
-          .set(result.toFirestoreMap(reportId: reportId, date: date, env: env));
+          .set({
+            ...result.toFirestoreMap(reportId: reportId, date: date, env: env),
+            'f3_order': _f3Order,
+          });
     } catch (e) {
       debugPrint('Cache write failed for $reportId: $e');
     }
@@ -221,9 +235,11 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
 
     // Build prior-score string for F3's trend computation (oldest → newest,
     // in the same 0.0=healthy .. 1.0=stressed scale F2 produces).
+    // _items is newest-first for display, so walk it from the END: each
+    // report's trend is then computed from the reports submitted BEFORE it.
     final priorScoresList = <double>[];
 
-    for (int i = 0; i < _items.length; i++) {
+    for (int i = _items.length - 1; i >= 0; i--) {
       if (stale()) return;
       final item = _items[i];
 
@@ -250,7 +266,10 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
           degradationIndicator: item.report.degradationIndicator,
           observerNotes: item.report.description,
           severity: item.report.severity,
-          priorScores: priorScoresList.join(','),
+          priorScores: (priorScoresList.length > _f3Window
+                  ? priorScoresList.sublist(priorScoresList.length - _f3Window)
+                  : priorScoresList)
+              .join(','),
         );
       }
 
